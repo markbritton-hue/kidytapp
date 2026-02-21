@@ -59,9 +59,18 @@
       const grid     = document.getElementById("grid");
 
       // Get the active user ID from config
-      const configSnap = await getDoc(doc(db, "config", "settings"));
+      let configSnap;
+      try {
+        configSnap = await getDoc(doc(db, "config", "settings"));
+      } catch (err) {
+        subtitle.textContent = "Firestore error: " + err.message;
+        return;
+      }
+
+      console.log("config/settings exists:", configSnap.exists(), configSnap.data());
+
       if (!configSnap.exists() || !configSnap.data().activeUserId) {
-        subtitle.textContent = "No channels yet — ask a parent to set up KidyTapp!";
+        subtitle.textContent = "No account set up yet — go to Parent Zone to create one.";
         grid.innerHTML = `
           <div class="col-span-full flex flex-col items-center py-24 gap-6">
             <div class="text-8xl animate-bounce">📺</div>
@@ -71,15 +80,25 @@
       }
 
       const { activeUserId } = configSnap.data();
+      console.log("activeUserId:", activeUserId);
 
       // Load that user's approved channels
-      const snap = await getDocs(
-        query(collection(db, "users", activeUserId, "channels"), orderBy("addedAt", "asc"))
-      );
+      let snap;
+      try {
+        snap = await getDocs(
+          query(collection(db, "users", activeUserId, "channels"), orderBy("addedAt", "asc"))
+        );
+      } catch (err) {
+        subtitle.textContent = "Error reading channels: " + err.message;
+        console.error("getDocs error:", err);
+        return;
+      }
+
       const channels = snap.docs.map(d => d.data());
+      console.log("channels found:", channels.length, channels);
 
       if (channels.length === 0) {
-        subtitle.textContent = "No channels yet — ask a parent to add some!";
+        subtitle.textContent = "No channels yet — add some in the Parent Zone!";
         grid.innerHTML = `
           <div class="col-span-full flex flex-col items-center py-24 gap-6">
             <div class="text-8xl animate-bounce">📺</div>
@@ -104,9 +123,7 @@
         </a>`).join("");
     }
 
-    load().catch(() => {
-      document.getElementById("subtitle").textContent = "Error loading channels. Check your connection.";
-    });
+    load();
   </script>
 </body>
 </html>

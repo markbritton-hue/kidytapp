@@ -95,12 +95,18 @@
     let currentUser = null;
 
     // ── Auth guard ─────────────────────────────────────────────────────────────
-    onAuthStateChanged(auth, user => {
+    onAuthStateChanged(auth, async user => {
       if (!user) { location.href = "index.html"; return; }
       currentUser = user;
       // Show username in header
       const displayName = user.displayName || user.email.split("@")[0];
       document.getElementById("welcome").textContent = `Signed in as ${displayName}`;
+      // Always sync activeUserId so the kids home page knows whose channels to show
+      await setDoc(doc(db, "config", "settings"), {
+        activeUserId: user.uid,
+        username: displayName,
+        parentSetup: true,
+      }, { merge: true });
       loadChannels();
     });
 

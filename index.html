@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KidyTapp</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .channel-card { transition: transform 0.18s, box-shadow 0.18s; }
+    .channel-card:hover { transform: scale(1.06); box-shadow: 0 20px 40px rgba(0,0,0,0.25); }
+    .channel-card:active { transform: scale(0.96); }
+  </style>
+</head>
+<body class="min-h-screen bg-gradient-to-b from-sky-400 via-blue-500 to-purple-600 overflow-x-hidden">
+
+  <!-- Parent Zone button -->
+  <a href="parent/" class="fixed top-4 right-4 z-50 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white text-xs font-medium px-3 py-2 rounded-full border border-white/30 transition-all flex items-center gap-1">
+    🔒 Parent Zone
+  </a>
+
+  <!-- Decorative blobs -->
+  <div class="pointer-events-none fixed top-10 left-8 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
+  <div class="pointer-events-none fixed top-32 right-16 w-36 h-36 bg-yellow-300/20 rounded-full blur-3xl"></div>
+  <div class="pointer-events-none fixed bottom-20 left-1/4 w-28 h-28 bg-pink-300/20 rounded-full blur-2xl"></div>
+
+  <!-- Header -->
+  <header class="pt-10 pb-6 px-6 text-center">
+    <div class="flex items-center justify-center gap-3 mb-2">
+      <img src="public/logo.svg" alt="KidyTapp" class="w-14 h-14 drop-shadow-lg" />
+      <h1 class="text-5xl font-extrabold text-white drop-shadow-lg tracking-wide">KidyTapp</h1>
+    </div>
+    <p id="subtitle" class="text-blue-100 text-lg font-medium">Loading channels…</p>
+  </header>
+
+  <!-- Channel grid -->
+  <section class="px-4 sm:px-8 pb-16 max-w-6xl mx-auto">
+    <div id="grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6"></div>
+  </section>
+
+  <script type="module">
+    import { db } from "./js/firebase-config.js";
+    import { collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const COLORS = [
+      "from-blue-400 to-purple-500",
+      "from-pink-400 to-orange-400",
+      "from-green-400 to-teal-500",
+      "from-yellow-400 to-orange-500",
+      "from-purple-400 to-pink-500",
+      "from-cyan-400 to-blue-500",
+    ];
+
+    function pickColor(id) {
+      let h = 0;
+      for (let i = 0; i < id.length; i++) h = id.charCodeAt(i) + ((h << 5) - h);
+      return COLORS[Math.abs(h) % COLORS.length];
+    }
+
+    async function load() {
+      const snap = await getDocs(query(collection(db, "channels"), orderBy("addedAt", "asc")));
+      const channels = snap.docs.map(d => d.data());
+      const grid = document.getElementById("grid");
+      const subtitle = document.getElementById("subtitle");
+
+      if (channels.length === 0) {
+        subtitle.textContent = "No channels yet — ask a parent to add some!";
+        grid.innerHTML = `
+          <div class="col-span-full flex flex-col items-center py-24 gap-6">
+            <div class="text-8xl animate-bounce">📺</div>
+            <p class="text-white/80 text-xl text-center max-w-sm">No channels added yet. Ask a parent to set up KidyTapp!</p>
+          </div>`;
+        return;
+      }
+
+      subtitle.textContent = "Pick a channel to watch!";
+      grid.innerHTML = channels.map(ch => `
+        <a href="channel.html?id=${ch.id}" class="channel-card block">
+          <div class="bg-gradient-to-br ${pickColor(ch.id)} rounded-3xl overflow-hidden shadow-lg">
+            <div class="aspect-square bg-black/10">
+              ${ch.thumbnail
+                ? `<img src="${ch.thumbnail}" alt="${ch.name}" class="w-full h-full object-cover" />`
+                : `<div class="w-full h-full flex items-center justify-center text-6xl">📺</div>`}
+            </div>
+            <div class="px-3 py-3 bg-white/20 backdrop-blur-sm">
+              <p class="text-white font-bold text-sm sm:text-base text-center truncate drop-shadow">${ch.name}</p>
+            </div>
+          </div>
+        </a>`).join("");
+    }
+
+    load().catch(() => {
+      document.getElementById("subtitle").textContent = "Error loading channels. Check your connection.";
+    });
+  </script>
+</body>
+</html>

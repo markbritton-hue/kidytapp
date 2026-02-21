@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KidyTapp — Watch</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gray-950 flex flex-col">
+
+  <!-- Top bar -->
+  <div class="flex items-center gap-3 px-4 py-3 bg-gray-900/80 backdrop-blur-sm">
+    <a id="back-btn" href="index.html" class="inline-flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white font-semibold px-4 py-2 rounded-full transition-all text-sm">
+      ← Back
+    </a>
+    <span class="text-gray-400 text-sm">KidyTapp</span>
+  </div>
+
+  <!-- Video player -->
+  <div class="flex-1 flex items-center justify-center p-2 sm:p-6">
+    <div class="w-full max-w-5xl">
+      <div class="relative w-full" style="padding-bottom: 56.25%;">
+        <iframe
+          id="player"
+          class="absolute inset-0 w-full h-full rounded-xl shadow-2xl"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen>
+        </iframe>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    const videoId = params.get("v");
+    const from = params.get("from");
+
+    // Validate video ID (11 chars alphanumeric + - _)
+    if (!videoId || !/^[\w-]{11}$/.test(videoId)) {
+      location.href = "index.html";
+    }
+
+    // Set back button
+    if (from) {
+      document.getElementById("back-btn").href = `channel.html?id=${from}`;
+    }
+
+    // Set iframe src
+    document.getElementById("player").src =
+      `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1&autoplay=1`;
+  </script>
+</body>
+</html>

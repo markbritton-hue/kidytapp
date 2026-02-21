@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell.exe -Command \"node --version; npm --version; \\(Get-Command node -ErrorAction SilentlyContinue\\).Source\")",
+      "Bash(powershell.exe -Command \"Get-ChildItem ''C:\\\\Program Files\\\\nodejs'' -ErrorAction SilentlyContinue; Get-ChildItem ''C:\\\\Program Files \\(x86\\)\\\\nodejs'' -ErrorAction SilentlyContinue; Get-ChildItem env: | Where-Object {$_Name -like ''*NODE*'' -or $_Name -like ''*NPM*''}\")"
+    ]
+  }
+}

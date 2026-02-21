@@ -1,0 +1,4 @@
+# Firebase service account keys — NEVER commit these
+*service-account*.json
+*serviceAccount*.json
+*firebase-adminsdk*.json

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KidyTapp — Parent Zone</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center p-4">
+
+  <div class="bg-white rounded-3xl shadow-2xl p-8 sm:p-10 w-full max-w-sm space-y-6">
+
+    <!-- Logo -->
+    <div class="flex justify-center">
+      <img src="../public/logo.svg" alt="KidyTapp" class="w-16 h-16" />
+    </div>
+
+    <div class="text-center">
+      <h1 class="text-2xl font-extrabold text-gray-800">Parent Zone</h1>
+      <p class="text-gray-500 text-sm mt-1">Enter your password to continue</p>
+    </div>
+
+    <form id="login-form" class="space-y-4">
+      <input
+        id="password"
+        type="password"
+        placeholder="Password"
+        autocomplete="current-password"
+        class="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-2xl text-center tracking-widest focus:outline-none focus:border-blue-400 transition-colors"
+      />
+
+      <p id="error" class="text-red-600 text-sm text-center font-medium hidden"></p>
+
+      <button
+        type="submit"
+        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-2xl text-lg transition-colors disabled:opacity-50"
+        id="submit-btn"
+      >
+        Enter
+      </button>
+    </form>
+
+    <a href="../index.html" class="block text-sm text-center text-blue-500 hover:text-blue-700 font-medium transition-colors">
+      ← Back to Kids Mode
+    </a>
+  </div>
+
+  <script type="module">
+    import { auth, PARENT_EMAIL } from "../js/firebase-config.js";
+    import { signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+    // Already logged in? Go straight to dashboard
+    onAuthStateChanged(auth, user => {
+      if (user) location.href = "dashboard.html";
+    });
+
+    document.getElementById("login-form").addEventListener("submit", async e => {
+      e.preventDefault();
+      const password = document.getElementById("password").value;
+      const btn = document.getElementById("submit-btn");
+      const err = document.getElementById("error");
+
+      err.classList.add("hidden");
+      btn.disabled = true;
+      btn.textContent = "Checking…";
+
+      try {
+        await signInWithEmailAndPassword(auth, PARENT_EMAIL, password);
+        location.href = "dashboard.html";
+      } catch {
+        err.textContent = "Incorrect password. Please try again.";
+        err.classList.remove("hidden");
+        btn.disabled = false;
+        btn.textContent = "Enter";
+      }
+    });
+  </script>
+</body>
+</html>

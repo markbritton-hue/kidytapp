@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>KidyTapp</title>
+  <title>Viddy</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     .channel-card { transition: transform 0.18s, box-shadow 0.18s; }
@@ -23,8 +23,8 @@
 
   <header class="pt-10 pb-6 px-6 text-center">
     <div class="flex items-center justify-center gap-3 mb-2">
-      <img src="public/logo.svg" alt="KidyTapp" class="w-14 h-14 drop-shadow-lg" />
-      <h1 class="text-5xl font-extrabold text-white drop-shadow-lg tracking-wide">KidyTapp</h1>
+      <img src="public/logo.svg" alt="Viddy" class="w-14 h-14 drop-shadow-lg" />
+      <h1 class="text-5xl font-extrabold text-white drop-shadow-lg tracking-wide">Viddy</h1>
     </div>
     <p id="subtitle" class="text-blue-100 text-lg font-medium">Loading…</p>
   </header>
@@ -61,11 +61,11 @@
       // Get the active user ID from config
       const configSnap = await getDoc(doc(db, "config", "settings"));
       if (!configSnap.exists() || !configSnap.data().activeUserId) {
-        subtitle.textContent = "No channels yet — ask a parent to set up KidyTapp!";
+        subtitle.textContent = "No channels yet — ask a parent to set up Viddy!";
         grid.innerHTML = `
           <div class="col-span-full flex flex-col items-center py-24 gap-6">
             <div class="text-8xl animate-bounce">📺</div>
-            <p class="text-white/80 text-xl text-center max-w-sm">Ask a parent to set up KidyTapp first!</p>
+            <p class="text-white/80 text-xl text-center max-w-sm">Ask a parent to set up Viddy first!</p>
           </div>`;
         return;
       }

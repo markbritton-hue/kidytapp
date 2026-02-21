@@ -14,35 +14,12 @@
       <img src="../public/logo.svg" alt="KidyTapp" class="w-16 h-16" />
     </div>
 
-    <!-- Loading -->
+    <!-- Loading spinner (shown until auth state resolves) -->
     <div id="loading" class="text-center py-6">
       <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
     </div>
 
-    <!-- SIGN IN -->
-    <div id="signin-view" class="hidden space-y-5">
-      <div class="text-center">
-        <h1 class="text-2xl font-extrabold text-gray-800">Welcome back!</h1>
-        <p class="text-gray-500 text-sm mt-1">Sign in to manage KidyTapp</p>
-      </div>
-      <form id="signin-form" class="space-y-3">
-        <input id="signin-username" type="text" placeholder="Username" autocomplete="username"
-          class="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-blue-400 transition-colors" />
-        <input id="signin-password" type="password" placeholder="Password" autocomplete="current-password"
-          class="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-blue-400 transition-colors" />
-        <p id="signin-error" class="hidden text-red-600 text-sm text-center font-medium"></p>
-        <button type="submit"
-          class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-2xl text-lg transition-colors disabled:opacity-50">
-          Sign In
-        </button>
-      </form>
-      <p class="text-center text-sm text-gray-400">
-        New here?
-        <button id="show-setup" class="text-blue-500 hover:text-blue-700 font-medium">Create an account</button>
-      </p>
-    </div>
-
-    <!-- SETUP -->
+    <!-- SETUP (create account) — shown by default -->
     <div id="setup-view" class="hidden space-y-5">
       <div class="text-center">
         <h1 class="text-2xl font-extrabold text-gray-800">Create your account</h1>
@@ -67,6 +44,29 @@
       </p>
     </div>
 
+    <!-- SIGN IN -->
+    <div id="signin-view" class="hidden space-y-5">
+      <div class="text-center">
+        <h1 class="text-2xl font-extrabold text-gray-800">Welcome back!</h1>
+        <p class="text-gray-500 text-sm mt-1">Sign in to manage KidyTapp</p>
+      </div>
+      <form id="signin-form" class="space-y-3">
+        <input id="signin-username" type="text" placeholder="Username" autocomplete="username"
+          class="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-blue-400 transition-colors" />
+        <input id="signin-password" type="password" placeholder="Password" autocomplete="current-password"
+          class="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-blue-400 transition-colors" />
+        <p id="signin-error" class="hidden text-red-600 text-sm text-center font-medium"></p>
+        <button type="submit"
+          class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-2xl text-lg transition-colors disabled:opacity-50">
+          Sign In
+        </button>
+      </form>
+      <p class="text-center text-sm text-gray-400">
+        First time here?
+        <button id="show-setup" class="text-blue-500 hover:text-blue-700 font-medium">Create an account</button>
+      </p>
+    </div>
+
     <a href="../index.html" class="block text-sm text-center text-gray-400 hover:text-gray-600 mt-6 transition-colors">
       ← Back to Kids Mode
     </a>
@@ -80,80 +80,35 @@
       onAuthStateChanged,
       updateProfile
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const loadingEl  = document.getElementById("loading");
     const signinView = document.getElementById("signin-view");
     const setupView  = document.getElementById("setup-view");
 
-    // Already logged in? Go to dashboard
+    // If already logged in, go straight to dashboard
     onAuthStateChanged(auth, user => {
-      if (user) { location.href = "dashboard.html"; }
-    });
-
-    // Check if any account has been set up yet
-    async function detectMode() {
-      try {
-        const snap = await getDoc(doc(db, "config", "settings"));
-        const isSetUp = snap.exists() && snap.data().parentSetup === true;
-        show(isSetUp ? "signin" : "setup");
-      } catch {
-        show("signin");
+      if (user) {
+        location.href = "dashboard.html";
+        return;
       }
-    }
-
-    function show(mode) {
+      // Not logged in — show the create-account form by default
       loadingEl.classList.add("hidden");
-      if (mode === "setup") {
-        setupView.classList.remove("hidden");
-        document.getElementById("setup-username").focus();
-      } else {
-        signinView.classList.remove("hidden");
-        document.getElementById("signin-username").focus();
-      }
-    }
-
-    document.getElementById("show-setup").addEventListener("click", () => {
-      signinView.classList.add("hidden");
       setupView.classList.remove("hidden");
       document.getElementById("setup-username").focus();
     });
 
+    // Toggle between views
     document.getElementById("show-signin").addEventListener("click", () => {
       setupView.classList.add("hidden");
       signinView.classList.remove("hidden");
       document.getElementById("signin-username").focus();
     });
 
-    // ── Sign in ───────────────────────────────────────────────────────────────
-    document.getElementById("signin-form").addEventListener("submit", async e => {
-      e.preventDefault();
-      const username = document.getElementById("signin-username").value.trim();
-      const password = document.getElementById("signin-password").value;
-      const errEl = document.getElementById("signin-error");
-      const btn = e.submitter;
-
-      if (!username) { errEl.textContent = "Please enter your username."; errEl.classList.remove("hidden"); return; }
-
-      errEl.classList.add("hidden");
-      btn.disabled = true;
-      btn.textContent = "Signing in…";
-
-      try {
-        const cred = await signInWithEmailAndPassword(auth, usernameToEmail(username), password);
-        // Update activeUserId so kids page loads this user's channels
-        await setDoc(doc(db, "config", "settings"), {
-          activeUserId: cred.user.uid,
-          username,
-          parentSetup: true,
-        }, { merge: true });
-        location.href = "dashboard.html";
-      } catch {
-        errEl.textContent = "Incorrect username or password.";
-        errEl.classList.remove("hidden");
-        btn.disabled = false;
-        btn.textContent = "Sign In";
-      }
+    document.getElementById("show-setup").addEventListener("click", () => {
+      signinView.classList.add("hidden");
+      setupView.classList.remove("hidden");
+      document.getElementById("setup-username").focus();
     });
 
     // ── Create account ────────────────────────────────────────────────────────
@@ -190,10 +145,8 @@
       try {
         const cred = await createUserWithEmailAndPassword(auth, usernameToEmail(username), password);
 
-        // Save username as display name
         await updateProfile(cred.user, { displayName: username });
 
-        // Save to config so kids page and other devices know who is set up
         await setDoc(doc(db, "config", "settings"), {
           activeUserId: cred.user.uid,
           username,
@@ -213,7 +166,35 @@
       }
     });
 
-    detectMode();
+    // ── Sign in ───────────────────────────────────────────────────────────────
+    document.getElementById("signin-form").addEventListener("submit", async e => {
+      e.preventDefault();
+      const username = document.getElementById("signin-username").value.trim();
+      const password = document.getElementById("signin-password").value;
+      const errEl = document.getElementById("signin-error");
+      const btn = e.submitter;
+
+      if (!username) { errEl.textContent = "Please enter your username."; errEl.classList.remove("hidden"); return; }
+
+      errEl.classList.add("hidden");
+      btn.disabled = true;
+      btn.textContent = "Signing in…";
+
+      try {
+        const cred = await signInWithEmailAndPassword(auth, usernameToEmail(username), password);
+        await setDoc(doc(db, "config", "settings"), {
+          activeUserId: cred.user.uid,
+          username,
+          parentSetup: true,
+        }, { merge: true });
+        location.href = "dashboard.html";
+      } catch {
+        errEl.textContent = "Incorrect username or password.";
+        errEl.classList.remove("hidden");
+        btn.disabled = false;
+        btn.textContent = "Sign In";
+      }
+    });
   </script>
 </body>
 </html>

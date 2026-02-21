@@ -1,10 +1,17 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // Channel list — anyone can read, only logged-in parent can write
     match /channels/{channelId} {
-      // Anyone can read (kids need the channel list)
       allow read: true;
-      // Only the logged-in parent can add or remove channels
+      allow write: if request.auth != null;
+    }
+
+    // App config — anyone can read (to detect first-time setup),
+    // only logged-in parent can write
+    match /config/{document} {
+      allow read: true;
       allow write: if request.auth != null;
     }
   }

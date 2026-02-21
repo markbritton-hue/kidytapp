@@ -7,6 +7,13 @@ service cloud.firestore {
       allow write: if request.auth != null && request.auth.uid == userId;
     }
 
+    // Kids pages are unauthenticated, so writes are open;
+    // only the authenticated parent can read their own history
+    match /users/{userId}/watchHistory/{sessionId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if true;
+    }
+
     match /config/{document} {
       allow read: if true;
       allow write: if request.auth != null;

@@ -92,12 +92,26 @@
       </div>
     </section>
 
+    <!-- Watch Activity -->
+    <section class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+      <div class="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+        <div>
+          <h2 class="text-lg font-bold text-gray-800">Watch Activity</h2>
+          <p id="activity-summary" class="text-sm text-gray-500 mt-0.5">Loading…</p>
+        </div>
+        <button id="clear-history-btn" class="text-xs text-red-400 hover:text-red-600 font-medium transition-colors">
+          Clear history
+        </button>
+      </div>
+      <div id="activity-list" class="px-6 py-4 divide-y divide-gray-100"></div>
+    </section>
+
   </div>
 
   <script type="module">
     import { db, auth } from "../js/firebase-config.js";
     import {
-      collection, getDocs, doc, setDoc, deleteDoc, query, orderBy
+      collection, getDocs, doc, setDoc, deleteDoc, query, orderBy, limit, writeBatch
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
@@ -117,6 +131,7 @@
         parentSetup: true,
       }, { merge: true });
       loadChannels();
+      loadActivity();
     });
 
     // ── Logout ─────────────────────────────────────────────────────────────────
@@ -278,6 +293,69 @@
         addBtn.disabled = false;
         addBtn.textContent = "Add";
       }
+    });
+
+    // ── Watch Activity ─────────────────────────────────────────────────────────
+    function fmtDuration(secs) {
+      if (!secs || secs < 5) return null;
+      const h = Math.floor(secs / 3600);
+      const m = Math.floor((secs % 3600) / 60);
+      const s = secs % 60;
+      if (h > 0) return `${h}h ${m}m`;
+      if (m > 0) return `${m}m ${s}s`;
+      return `${s}s`;
+    }
+
+    async function loadActivity() {
+      const list    = document.getElementById("activity-list");
+      const summary = document.getElementById("activity-summary");
+
+      const snap = await getDocs(
+        query(collection(db, "users", currentUser.uid, "watchHistory"), orderBy("startedAt", "desc"), limit(30))
+      ).catch(() => null);
+
+      if (!snap || snap.empty) {
+        summary.textContent = "No activity yet";
+        list.innerHTML = `<div class="py-10 text-center text-gray-400"><div class="text-4xl mb-2">📭</div><p>No videos watched yet.</p></div>`;
+        return;
+      }
+
+      const records = snap.docs.map(d => d.data());
+
+      // Total time today
+      const todayPrefix = new Date().toISOString().slice(0, 10);
+      const todaySecs = records
+        .filter(r => r.startedAt && r.startedAt.startsWith(todayPrefix))
+        .reduce((sum, r) => sum + (r.durationSeconds || 0), 0);
+
+      summary.textContent = todaySecs > 0
+        ? `Today: ${fmtDuration(todaySecs)} watched`
+        : "No activity today yet";
+
+      list.innerHTML = records.map(r => {
+        const dur  = fmtDuration(r.durationSeconds);
+        const date = r.startedAt
+          ? new Date(r.startedAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+          : "";
+        return `
+          <div class="flex items-center gap-3 py-3">
+            <img src="${r.thumbnail}" alt="" class="w-20 h-12 rounded-lg object-cover flex-shrink-0 bg-gray-200" />
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-gray-800 truncate">${r.videoTitle}</p>
+              <p class="text-xs text-gray-400 truncate">${r.channelName || ""}</p>
+              <p class="text-xs text-gray-400 mt-0.5">${date}${dur ? ` · ${dur}` : ""}</p>
+            </div>
+          </div>`;
+      }).join("");
+    }
+
+    document.getElementById("clear-history-btn").addEventListener("click", async () => {
+      if (!confirm("Clear all watch history?")) return;
+      const snap = await getDocs(collection(db, "users", currentUser.uid, "watchHistory"));
+      const batch = writeBatch(db);
+      snap.docs.forEach(d => batch.delete(d.ref));
+      await batch.commit();
+      loadActivity();
     });
   </script>
 </body>

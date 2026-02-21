@@ -31,11 +31,16 @@
     </div>
   </div>
 
-  <script>
+  <script type="module">
+    import { db } from "./js/firebase-config.js";
+    import { doc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
     const params = new URLSearchParams(location.search);
-    const videoId = params.get("v");
-    const from = params.get("from");
-    const uid = params.get("uid");
+    const videoId    = params.get("v");
+    const from       = params.get("from");
+    const uid        = params.get("uid");
+    const videoTitle = params.get("title") || videoId;
+    const channelName = params.get("ch") || "";
 
     // Validate video ID (11 chars alphanumeric + - _)
     if (!videoId || !/^[\w-]{11}$/.test(videoId)) {
@@ -50,6 +55,43 @@
     // Set iframe src
     document.getElementById("player").src =
       `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1&autoplay=1`;
+
+    // ── Watch tracking ────────────────────────────────────────────────────────
+    if (uid) {
+      const sessionId  = Date.now().toString();
+      const sessionRef = doc(db, "users", uid, "watchHistory", sessionId);
+      const startTime  = Date.now();
+
+      // Write initial record
+      setDoc(sessionRef, {
+        videoId,
+        videoTitle,
+        channelId:    from || "",
+        channelName,
+        thumbnail:    `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
+        startedAt:    new Date().toISOString(),
+        durationSeconds: 0,
+      }).catch(() => {});
+
+      // Update duration in Firestore
+      function saveDuration() {
+        const secs = Math.floor((Date.now() - startTime) / 1000);
+        if (secs < 2) return;
+        updateDoc(sessionRef, {
+          durationSeconds: secs,
+          endedAt: new Date().toISOString(),
+        }).catch(() => {});
+      }
+
+      // Save every 30 seconds
+      setInterval(saveDuration, 30000);
+
+      // Save when navigating away
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) saveDuration();
+      });
+      window.addEventListener("pagehide", saveDuration);
+    }
   </script>
 </body>
 </html>

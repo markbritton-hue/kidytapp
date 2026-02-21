@@ -94,7 +94,7 @@
         const date = new Date(item.pubDate).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 
         return `
-          <a href="watch.html?v=${videoId}&from=${channelId}&uid=${uid}" class="video-card block bg-white rounded-2xl overflow-hidden shadow-md">
+          <a href="watch.html?v=${videoId}&from=${channelId}&uid=${uid}&title=${encodeURIComponent(title)}&ch=${encodeURIComponent(channel.name)}" class="video-card block bg-white rounded-2xl overflow-hidden shadow-md">
             <div class="relative aspect-video bg-gray-200">
               <img src="${thumb}" alt="${title}" class="w-full h-full object-cover" />
               <div class="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black/30">

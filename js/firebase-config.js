@@ -16,5 +16,7 @@ const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 
-// Fixed email used internally for parent Firebase Auth account
-export const PARENT_EMAIL = "parent@kidytapp.app";
+// Converts a plain username into a Firebase-compatible email
+export function usernameToEmail(username) {
+  return `${username.toLowerCase().trim()}@kidytapp.app`;
+}

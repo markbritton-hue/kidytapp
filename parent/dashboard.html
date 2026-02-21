@@ -8,14 +8,13 @@
 </head>
 <body class="min-h-screen bg-gray-50">
 
-  <!-- Header -->
   <header class="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm">
     <div class="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-4">
       <div class="flex items-center gap-3">
         <span class="text-2xl">🛡️</span>
         <div>
           <h1 class="text-xl font-extrabold text-gray-800">KidyTapp Dashboard</h1>
-          <p class="text-xs text-gray-400">Parent Controls</p>
+          <p id="welcome" class="text-xs text-gray-400">Parent Controls</p>
         </div>
       </div>
       <div class="flex gap-2">
@@ -44,16 +43,13 @@
     <section class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
       <div class="px-6 py-5 border-b border-gray-100">
         <h2 class="text-lg font-bold text-gray-800">Add a Channel</h2>
-        <p class="text-sm text-gray-500 mt-0.5">Paste the YouTube channel URL</p>
+        <p class="text-sm text-gray-500 mt-0.5">Paste a YouTube channel URL or @handle</p>
       </div>
       <div class="px-6 py-5 space-y-4">
         <div class="flex gap-2">
-          <input
-            id="channel-url"
-            type="text"
-            placeholder="https://www.youtube.com/channel/UCxxxxxx"
-            class="flex-1 px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-          />
+          <input id="channel-url" type="text"
+            placeholder="https://www.youtube.com/@ChannelName"
+            class="flex-1 px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
           <button id="lookup-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-3 rounded-xl text-sm transition-colors disabled:opacity-50">
             Look up
           </button>
@@ -71,19 +67,17 @@
           </button>
         </div>
 
-        <p id="add-error" class="hidden text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg px-4 py-2"></p>
+        <p id="add-error"   class="hidden text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg px-4 py-2"></p>
         <p id="add-success" class="hidden text-green-700 text-sm bg-green-50 border border-green-200 rounded-lg px-4 py-2"></p>
 
-        <!-- How to find the channel URL -->
         <details class="text-xs text-gray-400 cursor-pointer">
           <summary class="font-medium hover:text-gray-600">How do I find the channel URL?</summary>
           <div class="mt-2 space-y-1 pl-2">
             <p>1. Go to the YouTube channel in your browser</p>
-            <p>2. Click the channel name or avatar to go to their page</p>
-            <p>3. Copy the URL from your browser's address bar</p>
-            <p class="text-gray-500">Works with URLs like:</p>
-            <p class="font-mono bg-gray-100 px-2 py-1 rounded">youtube.com/channel/UCxxxxxx</p>
+            <p>2. Copy the URL from the address bar</p>
+            <p class="text-gray-500">Works with:</p>
             <p class="font-mono bg-gray-100 px-2 py-1 rounded">youtube.com/@ChannelName</p>
+            <p class="font-mono bg-gray-100 px-2 py-1 rounded">youtube.com/channel/UCxxxxxx</p>
           </div>
         </details>
       </div>
@@ -98,24 +92,35 @@
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-    // ── Auth guard ────────────────────────────────────────────────────────────
+    let currentUser = null;
+
+    // ── Auth guard ─────────────────────────────────────────────────────────────
     onAuthStateChanged(auth, user => {
-      if (!user) location.href = "index.html";
-      else loadChannels();
+      if (!user) { location.href = "index.html"; return; }
+      currentUser = user;
+      // Show username in header
+      const displayName = user.displayName || user.email.split("@")[0];
+      document.getElementById("welcome").textContent = `Signed in as ${displayName}`;
+      loadChannels();
     });
 
-    // ── Logout ────────────────────────────────────────────────────────────────
+    // ── Logout ─────────────────────────────────────────────────────────────────
     document.getElementById("logout-btn").addEventListener("click", async () => {
       await signOut(auth);
       location.href = "index.html";
     });
 
-    // ── Load channels ─────────────────────────────────────────────────────────
+    // ── Channels collection path for the current user ──────────────────────────
+    function channelsCol() {
+      return collection(db, "users", currentUser.uid, "channels");
+    }
+
+    // ── Load channels ──────────────────────────────────────────────────────────
     async function loadChannels() {
-      const snap = await getDocs(query(collection(db, "channels"), orderBy("addedAt", "asc")));
+      const snap = await getDocs(query(channelsCol(), orderBy("addedAt", "asc")));
       const channels = snap.docs.map(d => d.data());
       const count = document.getElementById("channel-count");
-      const list = document.getElementById("channel-list");
+      const list  = document.getElementById("channel-list");
 
       count.textContent = channels.length === 0
         ? "No channels added yet"
@@ -139,26 +144,23 @@
             <p class="font-semibold text-gray-800 truncate">${ch.name}</p>
             <p class="text-xs text-gray-400 truncate">ID: ${ch.id}</p>
           </div>
-          <button
-            onclick="removeChannel('${ch.id}', '${ch.name.replace(/'/g, "\\'")}')"
+          <button onclick="removeChannel('${ch.id}', '${ch.name.replace(/'/g, "\\'")}')"
             class="flex-shrink-0 bg-red-100 hover:bg-red-200 text-red-600 font-semibold px-3 py-2 rounded-xl text-sm transition-colors">
             Remove
           </button>
         </div>`).join("");
     }
 
-    // ── Remove channel ────────────────────────────────────────────────────────
     window.removeChannel = async (id, name) => {
       if (!confirm(`Remove "${name}" from KidyTapp?`)) return;
-      await deleteDoc(doc(db, "channels", id));
+      await deleteDoc(doc(db, "users", currentUser.uid, "channels", id));
       loadChannels();
     };
 
-    // ── Resolve channel — extracts ID, name and thumbnail from YouTube page ──────
+    // ── Resolve channel from YouTube page ──────────────────────────────────────
     async function resolveChannel(input) {
       input = input.trim();
 
-      // Determine the YouTube page URL to fetch
       let pageUrl;
       let channelId = null;
 
@@ -170,7 +172,6 @@
         channelId = input;
         pageUrl = `https://www.youtube.com/channel/${channelId}`;
       } else {
-        // @handle or URL containing a handle
         let handle = null;
         const handleMatch = input.match(/\/@([\w.-]+)/);
         if (handleMatch) handle = handleMatch[1];
@@ -179,42 +180,32 @@
         pageUrl = `https://www.youtube.com/@${handle}`;
       }
 
-      // Fetch the YouTube channel page via CORS proxy to extract meta tags
-      const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(pageUrl)}`;
-      const res = await fetch(proxyUrl);
+      const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(pageUrl)}`);
       if (!res.ok) throw new Error("Could not reach YouTube. Please try again.");
       const html = await res.text();
 
-      // Extract channel ID
       if (!channelId) {
         const match = html.match(/"channelId":"(UC[\w-]{22})"/);
         if (!match) throw new Error("Could not find that channel. Try pasting the full YouTube channel URL.");
         channelId = match[1];
       }
 
-      // Extract channel name from og:title
-      const nameMatch = html.match(/<meta property="og:title" content="([^"]+)"/);
-      const name = nameMatch ? nameMatch[1] : "Unknown Channel";
-
-      // Extract thumbnail from og:image (this is the channel avatar)
+      const nameMatch  = html.match(/<meta property="og:title" content="([^"]+)"/);
       const thumbMatch = html.match(/<meta property="og:image" content="([^"]+)"/);
-      const thumbnail = thumbMatch ? thumbMatch[1] : "";
-
-      if (!name && !thumbnail) {
-        throw new Error("Channel not found. Make sure the URL is correct.");
-      }
+      const name       = nameMatch  ? nameMatch[1]  : "Unknown Channel";
+      const thumbnail  = thumbMatch ? thumbMatch[1] : "";
 
       return { id: channelId, name, thumbnail };
     }
 
-    // ── Look up button ────────────────────────────────────────────────────────
+    // ── Look up ────────────────────────────────────────────────────────────────
     let pendingChannel = null;
 
     document.getElementById("lookup-btn").addEventListener("click", async () => {
-      const url = document.getElementById("channel-url").value;
-      const btn = document.getElementById("lookup-btn");
-      const preview = document.getElementById("preview");
-      const errEl = document.getElementById("add-error");
+      const url       = document.getElementById("channel-url").value;
+      const btn       = document.getElementById("lookup-btn");
+      const preview   = document.getElementById("preview");
+      const errEl     = document.getElementById("add-error");
       const successEl = document.getElementById("add-success");
 
       errEl.classList.add("hidden");
@@ -223,7 +214,6 @@
       pendingChannel = null;
 
       if (!url.trim()) return;
-
       btn.disabled = true;
       btn.textContent = "Looking up…";
 
@@ -232,7 +222,7 @@
         pendingChannel = ch;
         document.getElementById("preview-thumb").src = ch.thumbnail;
         document.getElementById("preview-name").textContent = ch.name;
-        document.getElementById("preview-id").textContent = `ID: ${ch.id}`;
+        document.getElementById("preview-id").textContent   = `ID: ${ch.id}`;
         preview.classList.remove("hidden");
         preview.style.display = "flex";
       } catch (err) {
@@ -244,25 +234,26 @@
       }
     });
 
-    // ── Add button ────────────────────────────────────────────────────────────
+    // ── Add ────────────────────────────────────────────────────────────────────
     document.getElementById("add-btn").addEventListener("click", async () => {
       if (!pendingChannel) return;
-      const addBtn = document.getElementById("add-btn");
+      const addBtn    = document.getElementById("add-btn");
       const successEl = document.getElementById("add-success");
-      const errEl = document.getElementById("add-error");
+      const errEl     = document.getElementById("add-error");
 
       addBtn.disabled = true;
       addBtn.textContent = "Adding…";
 
       try {
-        await setDoc(doc(db, "channels", pendingChannel.id), {
+        await setDoc(doc(db, "users", currentUser.uid, "channels", pendingChannel.id), {
           ...pendingChannel,
           addedAt: new Date().toISOString(),
         });
         successEl.textContent = `"${pendingChannel.name}" added!`;
         successEl.classList.remove("hidden");
         document.getElementById("channel-url").value = "";
-        document.getElementById("preview").style.display = "none";
+        preview.style.display = "none";
+        document.getElementById("preview").classList.add("hidden");
         pendingChannel = null;
         loadChannels();
       } catch (err) {

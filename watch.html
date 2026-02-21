@@ -34,6 +34,7 @@
     const params = new URLSearchParams(location.search);
     const videoId = params.get("v");
     const from = params.get("from");
+    const uid = params.get("uid");
 
     // Validate video ID (11 chars alphanumeric + - _)
     if (!videoId || !/^[\w-]{11}$/.test(videoId)) {
@@ -42,7 +43,7 @@
 
     // Set back button
     if (from) {
-      document.getElementById("back-btn").href = `channel.html?id=${from}`;
+      document.getElementById("back-btn").href = `channel.html?id=${from}${uid ? "&uid=" + uid : ""}`;
     }
 
     // Set iframe src

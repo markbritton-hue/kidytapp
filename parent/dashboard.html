@@ -353,7 +353,7 @@
 
       const snap = await getDocs(
         query(collection(db, "users", currentUser.uid, "watchHistory"), orderBy("startedAt", "desc"), limit(30))
-      ).catch(() => null);
+      ).catch(err => { console.error("[Viddy] loadActivity failed:", err); return null; });
 
       if (!snap || snap.empty) {
         summary.textContent = "No activity yet";

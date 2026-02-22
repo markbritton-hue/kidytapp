@@ -74,10 +74,10 @@
       };
 
       // Write initial record
-      setDoc(sessionRef, videoData).catch(() => {});
+      setDoc(sessionRef, videoData).catch(err => console.error("[Viddy] watchHistory write failed:", err));
 
       // Write live now-playing status
-      setDoc(nowPlayingRef, videoData).catch(() => {});
+      setDoc(nowPlayingRef, videoData).catch(err => console.error("[Viddy] nowPlaying write failed:", err));
 
       // Update duration in Firestore
       function saveDuration() {

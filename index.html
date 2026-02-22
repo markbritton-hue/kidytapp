@@ -14,9 +14,34 @@
 </head>
 <body class="min-h-screen bg-gradient-to-b from-sky-400 via-blue-500 to-purple-600 overflow-x-hidden">
 
-  <a href="parent/" class="fixed top-4 right-4 z-50 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white text-xs font-medium px-3 py-2 rounded-full border border-white/30 transition-all flex items-center gap-1">
+  <button id="parent-zone-btn" class="fixed top-4 right-4 z-50 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white text-xs font-medium px-3 py-2 rounded-full border border-white/30 transition-all flex items-center gap-1">
     🔒 Parent Zone
-  </a>
+  </button>
+
+  <!-- Parent login modal -->
+  <div id="parent-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div class="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-sm relative">
+      <button id="modal-close" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl font-bold leading-none">&times;</button>
+      <div class="flex justify-center mb-5">
+        <img src="public/logo.svg" alt="Viddy" class="w-12 h-12" />
+      </div>
+      <div class="text-center mb-5">
+        <h2 class="text-xl font-extrabold text-gray-800">Parent Zone</h2>
+        <p class="text-gray-500 text-sm mt-1">Sign in to manage Viddy</p>
+      </div>
+      <form id="modal-form" class="space-y-3">
+        <input id="modal-username" type="text" placeholder="Username" autocomplete="username"
+          class="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-blue-400 transition-colors text-sm" />
+        <input id="modal-password" type="password" placeholder="Password" autocomplete="current-password"
+          class="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-blue-400 transition-colors text-sm" />
+        <p id="modal-error" class="hidden text-red-600 text-sm text-center font-medium"></p>
+        <button type="submit"
+          class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-2xl text-base transition-colors disabled:opacity-50">
+          Sign In
+        </button>
+      </form>
+    </div>
+  </div>
 
   <div class="pointer-events-none fixed top-10 left-8 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
   <div class="pointer-events-none fixed top-32 right-16 w-36 h-36 bg-yellow-300/20 rounded-full blur-3xl"></div>
@@ -35,10 +60,11 @@
   </section>
 
   <script type="module">
-    import { db } from "./js/firebase-config.js";
+    import { db, auth, usernameToEmail } from "./js/firebase-config.js";
     import {
-      doc, getDoc, collection, getDocs, query, orderBy
+      doc, getDoc, collection, getDocs, query, orderBy, setDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
     const COLORS = [
       "from-blue-400 to-purple-500",
@@ -107,6 +133,57 @@
 
     load().catch(() => {
       document.getElementById("subtitle").textContent = "Error loading channels. Check your connection.";
+    });
+
+    // ── Parent Zone modal ─────────────────────────────────────────────────────
+    // Always sign out any lingering session so login is always required
+    signOut(auth).catch(() => {});
+
+    const modal    = document.getElementById("parent-modal");
+    const modalErr = document.getElementById("modal-error");
+
+    document.getElementById("parent-zone-btn").addEventListener("click", () => {
+      modal.classList.remove("hidden");
+      modalErr.classList.add("hidden");
+      document.getElementById("modal-username").value = "";
+      document.getElementById("modal-password").value = "";
+      document.getElementById("modal-username").focus();
+    });
+
+    document.getElementById("modal-close").addEventListener("click", () => {
+      modal.classList.add("hidden");
+    });
+
+    modal.addEventListener("click", e => {
+      if (e.target === modal) modal.classList.add("hidden");
+    });
+
+    document.getElementById("modal-form").addEventListener("submit", async e => {
+      e.preventDefault();
+      const username = document.getElementById("modal-username").value.trim();
+      const password = document.getElementById("modal-password").value;
+      const btn = e.submitter;
+
+      modalErr.classList.add("hidden");
+      if (!username || !password) return;
+
+      btn.disabled = true;
+      btn.textContent = "Signing in…";
+
+      try {
+        const cred = await signInWithEmailAndPassword(auth, usernameToEmail(username), password);
+        await setDoc(doc(db, "config", "settings"), {
+          activeUserId: cred.user.uid,
+          username,
+          parentSetup: true,
+        }, { merge: true });
+        location.href = "parent/dashboard.html";
+      } catch {
+        modalErr.textContent = "Incorrect username or password.";
+        modalErr.classList.remove("hidden");
+        btn.disabled = false;
+        btn.textContent = "Sign In";
+      }
     });
   </script>
 </body>

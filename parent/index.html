@@ -68,9 +68,9 @@
       </p>
     </div>
 
-    <a href="../index.html" class="block text-sm text-center text-gray-400 hover:text-gray-600 mt-6 transition-colors">
+    <button id="back-to-kids" class="block w-full text-sm text-center text-gray-400 hover:text-gray-600 mt-6 transition-colors">
       ← Back to Kids Mode
-    </a>
+    </button>
   </div>
 
   <script type="module">
@@ -78,6 +78,7 @@
     import {
       createUserWithEmailAndPassword,
       signInWithEmailAndPassword,
+      signOut,
       onAuthStateChanged,
       updateProfile
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -97,6 +98,12 @@
       loadingEl.classList.add("hidden");
       signinView.classList.remove("hidden");
       document.getElementById("signin-username").focus();
+    });
+
+    // ── Back to kids — sign out first ─────────────────────────────────────────
+    document.getElementById("back-to-kids").addEventListener("click", async () => {
+      await signOut(auth).catch(() => {});
+      location.href = "../index.html";
     });
 
     // Toggle between views

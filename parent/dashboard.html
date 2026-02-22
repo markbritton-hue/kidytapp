@@ -34,6 +34,25 @@
 
   <div class="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-8">
 
+    <!-- Now Watching -->
+    <section id="now-watching" class="hidden bg-red-50 border border-red-200 rounded-2xl shadow-sm overflow-hidden">
+      <div class="px-6 py-5 flex items-center gap-4">
+        <span class="relative flex-shrink-0">
+          <span class="animate-ping absolute inline-flex h-3 w-3 rounded-full bg-red-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+        </span>
+        <span class="text-sm font-bold text-red-700 uppercase tracking-wide">Watching now</span>
+      </div>
+      <div class="px-6 pb-5 flex items-center gap-4">
+        <img id="nw-thumb" src="" alt="" class="w-24 h-14 rounded-lg object-cover flex-shrink-0 bg-gray-200" />
+        <div class="flex-1 min-w-0">
+          <p id="nw-title" class="font-semibold text-gray-800 truncate"></p>
+          <p id="nw-channel" class="text-xs text-gray-500 truncate"></p>
+          <p id="nw-time" class="text-xs text-gray-400 mt-0.5"></p>
+        </div>
+      </div>
+    </section>
+
     <!-- Approved Channels -->
     <section class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
       <div class="px-6 py-5 border-b border-gray-100">
@@ -111,7 +130,7 @@
   <script type="module">
     import { db, auth } from "../js/firebase-config.js";
     import {
-      collection, getDocs, doc, setDoc, deleteDoc, query, orderBy, limit, writeBatch
+      collection, getDocs, doc, setDoc, deleteDoc, query, orderBy, limit, writeBatch, onSnapshot
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
@@ -132,6 +151,7 @@
       }, { merge: true });
       loadChannels();
       loadActivity();
+      watchNowPlaying(user.uid);
     });
 
     // ── Logout ─────────────────────────────────────────────────────────────────
@@ -294,6 +314,27 @@
         addBtn.textContent = "Add";
       }
     });
+
+    // ── Now Playing (real-time) ────────────────────────────────────────────────
+    function watchNowPlaying(uid) {
+      const nowPlayingRef = doc(db, "users", uid, "status", "nowPlaying");
+      onSnapshot(nowPlayingRef, snap => {
+        const section = document.getElementById("now-watching");
+        if (!snap.exists()) {
+          section.classList.add("hidden");
+          return;
+        }
+        const d = snap.data();
+        document.getElementById("nw-thumb").src     = d.thumbnail || "";
+        document.getElementById("nw-title").textContent   = d.videoTitle || "Unknown video";
+        document.getElementById("nw-channel").textContent = d.channelName || "";
+        const started = d.startedAt ? new Date(d.startedAt) : null;
+        document.getElementById("nw-time").textContent = started
+          ? `Started at ${started.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`
+          : "";
+        section.classList.remove("hidden");
+      });
+    }
 
     // ── Watch Activity ─────────────────────────────────────────────────────────
     function fmtDuration(secs) {

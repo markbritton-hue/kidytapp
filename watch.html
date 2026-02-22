@@ -33,7 +33,7 @@
 
   <script type="module">
     import { db } from "./js/firebase-config.js";
-    import { doc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { doc, setDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const params = new URLSearchParams(location.search);
     const videoId    = params.get("v");
@@ -62,8 +62,8 @@
       const sessionRef = doc(db, "users", uid, "watchHistory", sessionId);
       const startTime  = Date.now();
 
-      // Write initial record
-      setDoc(sessionRef, {
+      const nowPlayingRef = doc(db, "users", uid, "status", "nowPlaying");
+      const videoData = {
         videoId,
         videoTitle,
         channelId:    from || "",
@@ -71,16 +71,26 @@
         thumbnail:    `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
         startedAt:    new Date().toISOString(),
         durationSeconds: 0,
-      }).catch(() => {});
+      };
+
+      // Write initial record
+      setDoc(sessionRef, videoData).catch(() => {});
+
+      // Write live now-playing status
+      setDoc(nowPlayingRef, videoData).catch(() => {});
 
       // Update duration in Firestore
       function saveDuration() {
         const secs = Math.floor((Date.now() - startTime) / 1000);
         if (secs < 2) return;
-        updateDoc(sessionRef, {
-          durationSeconds: secs,
-          endedAt: new Date().toISOString(),
-        }).catch(() => {});
+        const update = { durationSeconds: secs, endedAt: new Date().toISOString() };
+        updateDoc(sessionRef, update).catch(() => {});
+        updateDoc(nowPlayingRef, { durationSeconds: secs }).catch(() => {});
+      }
+
+      // Clear now-playing status when leaving
+      function clearNowPlaying() {
+        deleteDoc(nowPlayingRef).catch(() => {});
       }
 
       // Save every 30 seconds
@@ -88,9 +98,9 @@
 
       // Save when navigating away
       document.addEventListener("visibilitychange", () => {
-        if (document.hidden) saveDuration();
+        if (document.hidden) { saveDuration(); clearNowPlaying(); }
       });
-      window.addEventListener("pagehide", saveDuration);
+      window.addEventListener("pagehide", () => { saveDuration(); clearNowPlaying(); });
     }
   </script>
 </body>

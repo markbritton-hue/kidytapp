@@ -79,105 +79,94 @@
       document.getElementById("back-btn").href = `channel.html?id=${from}${uid ? "&uid=" + uid : ""}`;
     }
 
-    const playerSrc =
+    // Start the video immediately so the browser's autoplay permission (from the
+    // user's tap on the previous page) is still in scope.
+    document.getElementById("player").src =
       `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1&autoplay=1`;
 
     // ── Watch tracking + bedtime enforcement ──────────────────────────────────
     if (uid) {
-      (async () => {
-        const sessionId  = Date.now().toString();
-        const sessionRef = doc(db, "users", uid, "watchHistory", sessionId);
-        const startTime  = Date.now();
+      const sessionId  = Date.now().toString();
+      const sessionRef = doc(db, "users", uid, "watchHistory", sessionId);
+      const startTime  = Date.now();
 
-        const nowPlayingRef = doc(db, "users", uid, "status", "nowPlaying");
-        const videoData = {
-          videoId,
-          videoTitle,
-          channelId:    from || "",
-          channelName,
-          thumbnail:    `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
-          startedAt:    new Date().toISOString(),
-          durationSeconds: 0,
-        };
+      const nowPlayingRef = doc(db, "users", uid, "status", "nowPlaying");
+      const videoData = {
+        videoId,
+        videoTitle,
+        channelId:    from || "",
+        channelName,
+        thumbnail:    `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
+        startedAt:    new Date().toISOString(),
+        durationSeconds: 0,
+      };
 
-        // Update duration in Firestore
-        function saveDuration() {
-          const secs = Math.floor((Date.now() - startTime) / 1000);
-          if (secs < 2) return;
-          const update = { durationSeconds: secs, endedAt: new Date().toISOString() };
-          updateDoc(sessionRef, update).catch(() => {});
-          updateDoc(nowPlayingRef, { durationSeconds: secs }).catch(() => {});
-        }
+      // Write initial record
+      setDoc(sessionRef, videoData).catch(err => console.error("[Viddy] watchHistory write failed:", err));
 
-        // Clear now-playing status when leaving
-        function clearNowPlaying() {
-          deleteDoc(nowPlayingRef).catch(() => {});
-        }
+      // Write live now-playing status
+      setDoc(nowPlayingRef, videoData).catch(err => console.error("[Viddy] nowPlaying write failed:", err));
 
-        // ── Bedtime enforcement ────────────────────────────────────────────────
-        const scheduleRef = doc(db, "users", uid, "status", "schedule");
-        let currentSchedule = null;
+      // Update duration in Firestore
+      function saveDuration() {
+        const secs = Math.floor((Date.now() - startTime) / 1000);
+        if (secs < 2) return;
+        const update = { durationSeconds: secs, endedAt: new Date().toISOString() };
+        updateDoc(sessionRef, update).catch(() => {});
+        updateDoc(nowPlayingRef, { durationSeconds: secs }).catch(() => {});
+      }
 
-        function isBedtime(schedule) {
-          if (!schedule) return false;
-          if (schedule.forceStopped) return true;
-          if (!schedule.enabled || !schedule.bedtime) return false;
-          const now = new Date();
-          const nowMins = now.getHours() * 60 + now.getMinutes();
-          const [h, m] = schedule.bedtime.split(":").map(Number);
-          return nowMins >= h * 60 + m;
-        }
+      // Clear now-playing status when leaving
+      function clearNowPlaying() {
+        deleteDoc(nowPlayingRef).catch(() => {});
+      }
 
-        function showBedtimeOverlay(schedule) {
-          document.getElementById("player").src = "";
-          const overlay = document.getElementById("bedtime-overlay");
-          const msg = document.getElementById("bedtime-msg");
-          msg.textContent = schedule?.forceStopped
-            ? "A parent has stopped watching for now."
-            : "It's bedtime. See you tomorrow!";
-          overlay.classList.remove("hidden");
-          const backBtn = document.getElementById("bedtime-back");
-          if (from) backBtn.href = `channel.html?id=${from}${uid ? "&uid=" + uid : ""}`;
-        }
+      // Save every 30 seconds
+      setInterval(saveDuration, 30000);
 
-        function enforceSchedule(schedule) {
-          if (!isBedtime(schedule)) return;
-          showBedtimeOverlay(schedule);
-        }
+      // Save when navigating away
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) { saveDuration(); clearNowPlaying(); }
+      });
+      window.addEventListener("pagehide", () => { saveDuration(); clearNowPlaying(); });
 
-        // Check schedule before starting the video — prevents "start then stop" flash
-        const initialSnap = await getDoc(scheduleRef).catch(() => null);
-        currentSchedule = initialSnap?.exists() ? initialSnap.data() : null;
+      // ── Bedtime enforcement ──────────────────────────────────────────────────
+      const scheduleRef = doc(db, "users", uid, "status", "schedule");
+      let currentSchedule = null;
+      let overlayShown = false;
 
-        if (isBedtime(currentSchedule)) {
-          showBedtimeOverlay(currentSchedule);
-        } else {
-          // Schedule is clear — start the video and begin tracking
-          document.getElementById("player").src = playerSrc;
+      function isBedtime(schedule) {
+        if (!schedule) return false;
+        if (schedule.forceStopped) return true;
+        if (!schedule.enabled || !schedule.bedtime) return false;
+        const now = new Date();
+        const nowMins = now.getHours() * 60 + now.getMinutes();
+        const [h, m] = schedule.bedtime.split(":").map(Number);
+        return nowMins >= h * 60 + m;
+      }
 
-          setDoc(sessionRef, videoData).catch(err => console.error("[Viddy] watchHistory write failed:", err));
-          setDoc(nowPlayingRef, videoData).catch(err => console.error("[Viddy] nowPlaying write failed:", err));
+      function enforceSchedule(schedule) {
+        if (!isBedtime(schedule) || overlayShown) return;
+        overlayShown = true;
+        document.getElementById("player").src = "";
+        const overlay = document.getElementById("bedtime-overlay");
+        const msg = document.getElementById("bedtime-msg");
+        msg.textContent = schedule.forceStopped
+          ? "A parent has stopped watching for now."
+          : "It's bedtime. See you tomorrow!";
+        overlay.classList.remove("hidden");
+        const backBtn = document.getElementById("bedtime-back");
+        if (from) backBtn.href = `channel.html?id=${from}${uid ? "&uid=" + uid : ""}`;
+      }
 
-          setInterval(saveDuration, 30000);
+      // Real-time listener — reacts instantly to Stop Now / Resume
+      onSnapshot(scheduleRef, snap => {
+        currentSchedule = snap.exists() ? snap.data() : null;
+        enforceSchedule(currentSchedule);
+      });
 
-          document.addEventListener("visibilitychange", () => {
-            if (document.hidden) { saveDuration(); clearNowPlaying(); }
-          });
-          window.addEventListener("pagehide", () => { saveDuration(); clearNowPlaying(); });
-        }
-
-        // Real-time listener — reacts instantly to Stop Now / Resume
-        onSnapshot(scheduleRef, snap => {
-          currentSchedule = snap.exists() ? snap.data() : null;
-          enforceSchedule(currentSchedule);
-        });
-
-        // Time-based check every 30 seconds
-        setInterval(() => enforceSchedule(currentSchedule), 30000);
-      })();
-    } else {
-      // No uid — no schedule check needed, just start the video
-      document.getElementById("player").src = playerSrc;
+      // Time-based check every 30 seconds
+      setInterval(() => enforceSchedule(currentSchedule), 30000);
     }
   </script>
 </body>

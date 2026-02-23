@@ -300,25 +300,15 @@
     };
 
     // ── Load suggested channel avatars ────────────────────────────────────────
-    async function fetchChannelAvatar(input) {
-      const url = input.startsWith('UC')
-        ? `https://www.youtube.com/channel/${input}`
-        : `https://www.youtube.com/@${input.replace(/^@/, '')}`;
-      const html = await fetchViaProxy(url);
-      if (!html) return null;
-      const m = html.match(/<meta property="og:image" content="([^"]+)"/);
-      return m ? m[1] : null;
-    }
-
-    async function loadSuggestedAvatars() {
+    function loadSuggestedAvatars() {
       const entries = [
         { id: 'suggest-avatar-pbs',      input: 'UCrNnk0wFBnCS1awGjq_ijGQ' },
         { id: 'suggest-avatar-kidscrew', input: '@kidcrew' },
         { id: 'suggest-avatar-bluey',    input: 'UCVzLLZkDuFGAE2BGdBuBNBg' },
       ];
       for (const { id, input } of entries) {
-        fetchChannelAvatar(input).then(url => {
-          if (url) document.getElementById(id).src = url;
+        resolveChannel(input).then(ch => {
+          if (ch.thumbnail) document.getElementById(id).src = ch.thumbnail;
         }).catch(() => {});
       }
     }

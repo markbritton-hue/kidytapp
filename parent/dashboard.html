@@ -81,7 +81,7 @@
             <p class="font-semibold text-gray-800">PBS Kids</p>
             <p class="text-xs text-gray-400">Educational kids content</p>
           </div>
-          <button onclick="quickAdd('UCrNnk0wFBnCS1awGjq_ijGQ','PBS Kids',this)"
+          <button onclick="quickAdd('UCrNnk0wFBnCS1awGjq_ijGQ',this)"
             class="flex-shrink-0 bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-colors disabled:opacity-50">
             + Add
           </button>
@@ -92,7 +92,7 @@
             <p class="font-semibold text-gray-800">Kids Crew</p>
             <p class="text-xs text-gray-400">Songs, stories &amp; fun</p>
           </div>
-          <button onclick="quickAdd('UCXqgb_iVJtmE73ycq43ZZwA','Kids Crew',this)"
+          <button onclick="quickAdd('@kidcrew',this)"
             class="flex-shrink-0 bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-colors disabled:opacity-50">
             + Add
           </button>
@@ -103,7 +103,7 @@
             <p class="font-semibold text-gray-800">Bluey</p>
             <p class="text-xs text-gray-400">The beloved animated series</p>
           </div>
-          <button onclick="quickAdd('UCVzLLZkDuFGAE2BGdBuBNBg','Bluey',this)"
+          <button onclick="quickAdd('UCVzLLZkDuFGAE2BGdBuBNBg',this)"
             class="flex-shrink-0 bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-colors disabled:opacity-50">
             + Add
           </button>
@@ -299,23 +299,13 @@
     };
 
     // ── Quick-add a suggested channel ──────────────────────────────────────────
-    window.quickAdd = async (channelId, channelName, btn) => {
+    window.quickAdd = async (input, btn) => {
       btn.disabled = true;
       btn.textContent = "Adding…";
       try {
-        const rssXml = await fetchViaProxy(`https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`);
-        let name = channelName;
-        let thumbnail = "";
-        if (rssXml) {
-          const xmlDoc = new DOMParser().parseFromString(rssXml, "text/xml");
-          name = xmlDoc.querySelector("author name")?.textContent
-              || xmlDoc.querySelector("feed > title")?.textContent
-              || channelName;
-          const firstId = xmlDoc.querySelector("entry > id")?.textContent?.replace("yt:video:", "");
-          if (firstId) thumbnail = `https://i.ytimg.com/vi/${firstId}/mqdefault.jpg`;
-        }
-        await setDoc(doc(db, "users", currentUser.uid, "channels", channelId), {
-          id: channelId, name, thumbnail, addedAt: new Date().toISOString(),
+        const ch = await resolveChannel(input);
+        await setDoc(doc(db, "users", currentUser.uid, "channels", ch.id), {
+          ...ch, addedAt: new Date().toISOString(),
         });
         btn.textContent = "✓ Added";
         btn.classList.replace("bg-green-600", "bg-gray-400");

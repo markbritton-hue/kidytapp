@@ -66,21 +66,42 @@
           <p id="subtitle" class="text-blue-100 mt-1">Loading videos…</p>
         </div>`;
 
-      // Fetch videos via YouTube RSS → rss2json (no API key needed)
+      // Fetch videos via YouTube RSS, parsed directly (no third-party API)
       const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
-      const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`);
-      const data = await res.json();
+      const proxies = [
+        `https://corsproxy.io/?${encodeURIComponent(rssUrl)}`,
+        `https://api.allorigins.win/raw?url=${encodeURIComponent(rssUrl)}`,
+      ];
 
-      if (data.status !== "ok") {
+      let xmlText = null;
+      for (const proxy of proxies) {
+        try {
+          const res = await fetch(proxy);
+          if (res.ok) { xmlText = await res.text(); break; }
+        } catch {}
+      }
+
+      if (!xmlText) {
         document.getElementById("grid").innerHTML = `
           <div class="col-span-full bg-red-100 border border-red-300 rounded-2xl p-6 text-center">
             <p class="text-red-700 font-medium">Could not load videos.</p>
-            <p class="text-red-500 text-sm mt-1">The channel may not exist or may be unavailable.</p>
+            <p class="text-red-500 text-sm mt-1">Check your connection and try again.</p>
           </div>`;
         return;
       }
 
-      const videos = data.items || [];
+      const xmlDoc = new DOMParser().parseFromString(xmlText, "text/xml");
+      const entries = [...xmlDoc.querySelectorAll("entry")];
+      const videos = entries.map(entry => {
+        const idText = entry.querySelector("id")?.textContent || "";
+        const videoId = idText.replace("yt:video:", "");
+        return {
+          guid:      `yt:video:${videoId}`,
+          title:     entry.querySelector("title")?.textContent || "",
+          pubDate:   entry.querySelector("published")?.textContent || "",
+          thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+        };
+      }).filter(v => v.guid !== "yt:video:");
       document.getElementById("subtitle").textContent =
         videos.length ? `${videos.length} latest videos` : "No videos found";
 

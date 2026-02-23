@@ -242,9 +242,18 @@
         pageUrl = `https://www.youtube.com/@${handle}`;
       }
 
-      const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(pageUrl)}`);
-      if (!res.ok) throw new Error("Could not reach YouTube. Please try again.");
-      const html = await res.text();
+      const proxyUrls = [
+        `https://corsproxy.io/?${encodeURIComponent(pageUrl)}`,
+        `https://api.allorigins.win/raw?url=${encodeURIComponent(pageUrl)}`,
+      ];
+      let html = null;
+      for (const proxy of proxyUrls) {
+        try {
+          const res = await fetch(proxy);
+          if (res.ok) { html = await res.text(); break; }
+        } catch {}
+      }
+      if (!html) throw new Error("Could not reach YouTube. Please try again.");
 
       if (!channelId) {
         const match = html.match(/"channelId":"(UC[\w-]{22})"/);

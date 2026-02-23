@@ -242,26 +242,59 @@
         pageUrl = `https://www.youtube.com/@${handle}`;
       }
 
-      const proxyUrls = [
-        `https://corsproxy.io/?${encodeURIComponent(pageUrl)}`,
-        `https://api.allorigins.win/raw?url=${encodeURIComponent(pageUrl)}`,
-      ];
+      // Try multiple CORS proxies in order
       let html = null;
-      for (const proxy of proxyUrls) {
+
+      // Proxy 1: corsproxy.io
+      if (!html) {
         try {
-          const res = await fetch(proxy);
-          if (res.ok) { html = await res.text(); break; }
+          const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(pageUrl)}`);
+          if (res.ok) html = await res.text();
         } catch {}
       }
-      if (!html) throw new Error("Could not reach YouTube. Please try again.");
+
+      // Proxy 2: allorigins.win — use /get which always returns 200 with content wrapped in JSON
+      if (!html) {
+        try {
+          const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(pageUrl)}`);
+          if (res.ok) {
+            const data = await res.json();
+            html = data.contents || null;
+          }
+        } catch {}
+      }
+
+      // Proxy 3: thingproxy
+      if (!html) {
+        try {
+          const res = await fetch(`https://thingproxy.freeboard.io/fetch/${pageUrl}`);
+          if (res.ok) html = await res.text();
+        } catch {}
+      }
+
+      if (!html) {
+        throw new Error("Could not reach YouTube. Try pasting the channel ID directly — go to the channel on YouTube, click More → Share → Copy channel ID.");
+      }
 
       if (!channelId) {
-        const match = html.match(/"channelId":"(UC[\w-]{22})"/);
-        if (!match) throw new Error("Could not find that channel. Try pasting the full YouTube channel URL.");
+        // Try several patterns YouTube uses to embed the channel ID
+        const patterns = [
+          /"channelId":"(UC[\w-]{22})"/,
+          /"externalId":"(UC[\w-]{22})"/,
+          /channel_id=(UC[\w-]{22})/,
+          /"browseId":"(UC[\w-]{22})"/,
+          /"ucid":"(UC[\w-]{22})"/,
+        ];
+        let match = null;
+        for (const p of patterns) { match = html.match(p); if (match) break; }
+        if (!match) {
+          throw new Error("Channel found but ID could not be read. Try pasting the channel ID directly (it starts with UC...).");
+        }
         channelId = match[1];
       }
 
-      const nameMatch  = html.match(/<meta property="og:title" content="([^"]+)"/);
+      const nameMatch  = html.match(/<meta property="og:title" content="([^"]+)"/) ||
+                         html.match(/"title":\{"simpleText":"([^"]+)"\}/);
       const thumbMatch = html.match(/<meta property="og:image" content="([^"]+)"/);
       const name       = nameMatch  ? nameMatch[1]  : "Unknown Channel";
       const thumbnail  = thumbMatch ? thumbMatch[1] : "";

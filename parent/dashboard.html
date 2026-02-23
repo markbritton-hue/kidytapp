@@ -42,12 +42,17 @@
 
     <!-- Now Watching -->
     <section id="now-watching" class="hidden bg-red-50 border border-red-200 rounded-2xl shadow-sm overflow-hidden">
-      <div class="px-6 py-5 flex items-center gap-4">
-        <span class="relative flex-shrink-0">
-          <span class="animate-ping absolute inline-flex h-3 w-3 rounded-full bg-red-400 opacity-75"></span>
-          <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-        </span>
-        <span class="text-sm font-bold text-red-700 uppercase tracking-wide">Watching now</span>
+      <div class="px-6 py-5 flex items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+          <span class="relative flex-shrink-0">
+            <span class="animate-ping absolute inline-flex h-3 w-3 rounded-full bg-red-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+          </span>
+          <span class="text-sm font-bold text-red-700 uppercase tracking-wide">Watching now</span>
+        </div>
+        <button id="nw-stop-btn" class="bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-1.5 rounded-xl text-sm transition-colors">
+          🛑 Stop
+        </button>
       </div>
       <div class="px-6 pb-5 flex items-center gap-4">
         <img id="nw-thumb" src="" alt="" class="w-24 h-14 rounded-lg object-cover flex-shrink-0 bg-gray-200" />
@@ -592,11 +597,14 @@
       updateScheduleUI(s);
     });
 
-    document.getElementById("stop-now-btn").addEventListener("click", async () => {
+    async function stopNow() {
       await setDoc(scheduleRef(), { forceStopped: true }, { merge: true });
       const snap = await getDoc(scheduleRef());
       updateScheduleUI(snap.data());
-    });
+    }
+
+    document.getElementById("stop-now-btn").addEventListener("click", stopNow);
+    document.getElementById("nw-stop-btn").addEventListener("click", stopNow);
 
     document.getElementById("resume-btn").addEventListener("click", async () => {
       await setDoc(scheduleRef(), { forceStopped: false }, { merge: true });

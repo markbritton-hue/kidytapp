@@ -68,6 +68,49 @@
       <div id="channel-list" class="px-6 py-4 divide-y divide-gray-100"></div>
     </section>
 
+    <!-- Suggested Channels -->
+    <section class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+      <div class="px-6 py-5 border-b border-gray-100">
+        <h2 class="text-lg font-bold text-gray-800">Suggested Channels</h2>
+        <p class="text-sm text-gray-500 mt-0.5">Popular kids channels — add with one tap</p>
+      </div>
+      <div class="px-6 py-4 divide-y divide-gray-100">
+        <div class="flex items-center gap-4 py-4">
+          <img src="https://i.ytimg.com/vi/GkMZDDRjFak/mqdefault.jpg" alt="PBS Kids" class="w-14 h-14 rounded-full object-cover bg-gray-200 flex-shrink-0" />
+          <div class="flex-1 min-w-0">
+            <p class="font-semibold text-gray-800">PBS Kids</p>
+            <p class="text-xs text-gray-400">Educational kids content</p>
+          </div>
+          <button onclick="quickAdd('UCrNnk0wFBnCS1awGjq_ijGQ','PBS Kids',this)"
+            class="flex-shrink-0 bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-colors disabled:opacity-50">
+            + Add
+          </button>
+        </div>
+        <div class="flex items-center gap-4 py-4">
+          <img src="https://i.ytimg.com/vi/Z-xZ8JQg_LM/mqdefault.jpg" alt="Kids Crew" class="w-14 h-14 rounded-full object-cover bg-gray-200 flex-shrink-0" />
+          <div class="flex-1 min-w-0">
+            <p class="font-semibold text-gray-800">Kids Crew</p>
+            <p class="text-xs text-gray-400">Songs, stories &amp; fun</p>
+          </div>
+          <button onclick="quickAdd('UCXqgb_iVJtmE73ycq43ZZwA','Kids Crew',this)"
+            class="flex-shrink-0 bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-colors disabled:opacity-50">
+            + Add
+          </button>
+        </div>
+        <div class="flex items-center gap-4 py-4">
+          <img src="https://i.ytimg.com/vi/QJIzNqkdEAk/mqdefault.jpg" alt="Bluey" class="w-14 h-14 rounded-full object-cover bg-gray-200 flex-shrink-0" />
+          <div class="flex-1 min-w-0">
+            <p class="font-semibold text-gray-800">Bluey</p>
+            <p class="text-xs text-gray-400">The beloved animated series</p>
+          </div>
+          <button onclick="quickAdd('UCVzLLZkDuFGAE2BGdBuBNBg','Bluey',this)"
+            class="flex-shrink-0 bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-colors disabled:opacity-50">
+            + Add
+          </button>
+        </div>
+      </div>
+    </section>
+
     <!-- Add Channel -->
     <section class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
       <div class="px-6 py-5 border-b border-gray-100 flex items-center justify-between gap-4">
@@ -253,6 +296,35 @@
       if (!confirm(`Remove "${name}" from Viddy?`)) return;
       await deleteDoc(doc(db, "users", currentUser.uid, "channels", id));
       loadChannels();
+    };
+
+    // ── Quick-add a suggested channel ──────────────────────────────────────────
+    window.quickAdd = async (channelId, channelName, btn) => {
+      btn.disabled = true;
+      btn.textContent = "Adding…";
+      try {
+        const rssXml = await fetchViaProxy(`https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`);
+        let name = channelName;
+        let thumbnail = "";
+        if (rssXml) {
+          const xmlDoc = new DOMParser().parseFromString(rssXml, "text/xml");
+          name = xmlDoc.querySelector("author name")?.textContent
+              || xmlDoc.querySelector("feed > title")?.textContent
+              || channelName;
+          const firstId = xmlDoc.querySelector("entry > id")?.textContent?.replace("yt:video:", "");
+          if (firstId) thumbnail = `https://i.ytimg.com/vi/${firstId}/mqdefault.jpg`;
+        }
+        await setDoc(doc(db, "users", currentUser.uid, "channels", channelId), {
+          id: channelId, name, thumbnail, addedAt: new Date().toISOString(),
+        });
+        btn.textContent = "✓ Added";
+        btn.classList.replace("bg-green-600", "bg-gray-400");
+        btn.classList.replace("hover:bg-green-700", "hover:bg-gray-400");
+        loadChannels();
+      } catch {
+        btn.textContent = "Failed";
+        btn.disabled = false;
+      }
     };
 
     // ── Fetch a URL via multiple CORS proxies ──────────────────────────────────

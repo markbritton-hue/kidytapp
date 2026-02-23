@@ -219,85 +219,70 @@
       loadChannels();
     };
 
-    // ── Resolve channel from YouTube page ──────────────────────────────────────
+    // ── Fetch a URL via multiple CORS proxies ──────────────────────────────────
+    async function fetchViaProxy(url) {
+      try {
+        const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`);
+        if (r.ok) return await r.text();
+      } catch {}
+      try {
+        const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+        if (r.ok) { const d = await r.json(); if (d.contents) return d.contents; }
+      } catch {}
+      try {
+        const r = await fetch(`https://thingproxy.freeboard.io/fetch/${url}`);
+        if (r.ok) return await r.text();
+      } catch {}
+      return null;
+    }
+
+    // ── Resolve channel from YouTube ────────────────────────────────────────────
     async function resolveChannel(input) {
       input = input.trim();
-
-      let pageUrl;
       let channelId = null;
 
-      const idMatch = input.match(/\/channel\/(UC[\w-]{22})/);
-      if (idMatch) {
-        channelId = idMatch[1];
-        pageUrl = `https://www.youtube.com/channel/${channelId}`;
-      } else if (/^UC[\w-]{22}$/.test(input)) {
-        channelId = input;
-        pageUrl = `https://www.youtube.com/channel/${channelId}`;
-      } else {
-        let handle = null;
-        const handleMatch = input.match(/\/@([\w.-]+)/);
-        if (handleMatch) handle = handleMatch[1];
-        else if (input.startsWith("@")) handle = input.slice(1);
-        else handle = input;
-        pageUrl = `https://www.youtube.com/@${handle}`;
-      }
+      // Extract channel ID if already present in the input
+      const urlIdMatch = input.match(/\/channel\/(UC[\w-]{22})/);
+      if (urlIdMatch) channelId = urlIdMatch[1];
+      else if (/^UC[\w-]{22}$/.test(input)) channelId = input;
 
-      // Try multiple CORS proxies in order
-      let html = null;
-
-      // Proxy 1: corsproxy.io
-      if (!html) {
-        try {
-          const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(pageUrl)}`);
-          if (res.ok) html = await res.text();
-        } catch {}
-      }
-
-      // Proxy 2: allorigins.win — use /get which always returns 200 with content wrapped in JSON
-      if (!html) {
-        try {
-          const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(pageUrl)}`);
-          if (res.ok) {
-            const data = await res.json();
-            html = data.contents || null;
-          }
-        } catch {}
-      }
-
-      // Proxy 3: thingproxy
-      if (!html) {
-        try {
-          const res = await fetch(`https://thingproxy.freeboard.io/fetch/${pageUrl}`);
-          if (res.ok) html = await res.text();
-        } catch {}
-      }
-
-      if (!html) {
-        throw new Error("Could not reach YouTube. Try pasting the channel ID directly — go to the channel on YouTube, click More → Share → Copy channel ID.");
-      }
-
+      // Handle / @handle — need to scrape page to find the channel ID
       if (!channelId) {
-        // Try several patterns YouTube uses to embed the channel ID
-        const patterns = [
-          /"channelId":"(UC[\w-]{22})"/,
-          /"externalId":"(UC[\w-]{22})"/,
-          /channel_id=(UC[\w-]{22})/,
-          /"browseId":"(UC[\w-]{22})"/,
-          /"ucid":"(UC[\w-]{22})"/,
-        ];
-        let match = null;
-        for (const p of patterns) { match = html.match(p); if (match) break; }
-        if (!match) {
-          throw new Error("Channel found but ID could not be read. Try pasting the channel ID directly (it starts with UC...).");
+        const handleMatch = input.match(/\/@([\w.-]+)/);
+        let handle = handleMatch ? handleMatch[1]
+                   : input.startsWith("@") ? input.slice(1)
+                   : input;
+
+        const html = await fetchViaProxy(`https://www.youtube.com/@${handle}`);
+        if (!html) throw new Error("Could not reach YouTube. Paste the channel ID instead (it starts with UC… and can be found via the channel's Share menu).");
+
+        for (const p of [/"channelId":"(UC[\w-]{22})"/, /"externalId":"(UC[\w-]{22})"/, /channel_id=(UC[\w-]{22})/, /"browseId":"(UC[\w-]{22})"/]) {
+          const m = html.match(p);
+          if (m) { channelId = m[1]; break; }
         }
-        channelId = match[1];
+        if (!channelId) throw new Error("Channel found but ID could not be read. Paste the channel ID instead (starts with UC…).");
       }
 
-      const nameMatch  = html.match(/<meta property="og:title" content="([^"]+)"/) ||
-                         html.match(/"title":\{"simpleText":"([^"]+)"\}/);
-      const thumbMatch = html.match(/<meta property="og:image" content="([^"]+)"/);
-      const name       = nameMatch  ? nameMatch[1]  : "Unknown Channel";
-      const thumbnail  = thumbMatch ? thumbMatch[1] : "";
+      // Get channel name + thumbnail from the RSS feed — more reliable than scraping the page
+      const rssXml = await fetchViaProxy(`https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`);
+      if (!rssXml) throw new Error("Channel ID looks valid but could not load its feed. Check the ID and try again.");
+
+      const xmlDoc = new DOMParser().parseFromString(rssXml, "text/xml");
+      const name = xmlDoc.querySelector("author name")?.textContent
+                || xmlDoc.querySelector("feed > title")?.textContent
+                || channelId;
+
+      // Thumbnail: try to get channel avatar from page, fall back to first video thumbnail
+      let thumbnail = "";
+      const pageHtml = await fetchViaProxy(`https://www.youtube.com/channel/${channelId}`);
+      if (pageHtml) {
+        const m = pageHtml.match(/<meta property="og:image" content="([^"]+)"/);
+        if (m) thumbnail = m[1];
+      }
+      if (!thumbnail) {
+        const firstId = xmlDoc.querySelector("entry > id")?.textContent?.replace("yt:video:", "");
+        if (firstId) thumbnail = `https://i.ytimg.com/vi/${firstId}/mqdefault.jpg`;
+      }
 
       return { id: channelId, name, thumbnail };
     }

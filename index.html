@@ -119,13 +119,7 @@
 
       // Get the active user ID from config
       const configSnap = await getDoc(doc(db, "config", "settings"));
-      if (!configSnap.exists() || !configSnap.data().parentSetup) {
-        document.getElementById("setup-modal").classList.remove("hidden");
-        subtitle.textContent = "Setup needed";
-        grid.innerHTML = "";
-        return;
-      }
-      if (!configSnap.data().activeUserId) {
+      if (!configSnap.exists() || !configSnap.data().activeUserId) {
         subtitle.textContent = "No channels yet — ask a parent to set up Viddy!";
         grid.innerHTML = `
           <div class="col-span-full flex flex-col items-center py-24 gap-6">
@@ -198,7 +192,13 @@
     });
 
     // ── First-time setup modal ────────────────────────────────────────────────
+    // Show on first visit to this browser — localStorage resets when browser data is cleared
+    if (!localStorage.getItem("viddy-seen")) {
+      document.getElementById("setup-modal").classList.remove("hidden");
+    }
+
     document.getElementById("setup-dismiss").addEventListener("click", () => {
+      localStorage.setItem("viddy-seen", "1");
       document.getElementById("setup-modal").classList.add("hidden");
     });
 

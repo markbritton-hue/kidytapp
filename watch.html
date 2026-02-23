@@ -34,6 +34,16 @@
     <span class="text-gray-400 text-sm">Viddy</span>
   </div>
 
+  <!-- Bedtime overlay -->
+  <div id="bedtime-overlay" class="hidden fixed inset-0 bg-gray-950 z-50 flex flex-col items-center justify-center text-center p-8">
+    <div class="text-8xl mb-6">🌙</div>
+    <h2 class="text-3xl font-bold text-white mb-3">Time to stop watching!</h2>
+    <p id="bedtime-msg" class="text-gray-400 text-lg mb-8">It's bedtime. See you tomorrow!</p>
+    <a id="bedtime-back" href="index.html" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold px-8 py-3 rounded-full transition-colors">
+      ← Back
+    </a>
+  </div>
+
   <!-- Video player -->
   <div id="video-outer" class="flex-1 flex items-center justify-center p-2 sm:p-6">
     <div id="video-wrap" class="w-full max-w-5xl">
@@ -50,7 +60,7 @@
 
   <script type="module">
     import { db } from "./js/firebase-config.js";
-    import { doc, setDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { doc, setDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const params = new URLSearchParams(location.search);
     const videoId    = params.get("v");
@@ -118,6 +128,43 @@
         if (document.hidden) { saveDuration(); clearNowPlaying(); }
       });
       window.addEventListener("pagehide", () => { saveDuration(); clearNowPlaying(); });
+
+      // ── Bedtime enforcement ──────────────────────────────────────────────────
+      const scheduleRef = doc(db, "users", uid, "status", "schedule");
+      let currentSchedule = null;
+
+      function isBedtime(schedule) {
+        if (!schedule) return false;
+        if (schedule.forceStopped) return true;
+        if (!schedule.enabled || !schedule.bedtime) return false;
+        const now = new Date();
+        const nowMins = now.getHours() * 60 + now.getMinutes();
+        const [h, m] = schedule.bedtime.split(":").map(Number);
+        return nowMins >= h * 60 + m;
+      }
+
+      function enforceSchedule(schedule) {
+        if (!isBedtime(schedule)) return;
+        document.getElementById("player").src = "";
+        const overlay = document.getElementById("bedtime-overlay");
+        const msg = document.getElementById("bedtime-msg");
+        msg.textContent = schedule.forceStopped
+          ? "A parent has stopped watching for now."
+          : "It's bedtime. See you tomorrow!";
+        overlay.classList.remove("hidden");
+        // Wire back button with uid preserved
+        const backBtn = document.getElementById("bedtime-back");
+        if (from) backBtn.href = `channel.html?id=${from}${uid ? "&uid=" + uid : ""}`;
+      }
+
+      // Real-time listener — reacts instantly to Stop Now / Resume
+      onSnapshot(scheduleRef, snap => {
+        currentSchedule = snap.exists() ? snap.data() : null;
+        enforceSchedule(currentSchedule);
+      });
+
+      // Time-based check every 30 seconds
+      setInterval(() => enforceSchedule(currentSchedule), 30000);
     }
   </script>
 </body>

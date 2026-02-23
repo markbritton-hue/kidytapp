@@ -105,6 +105,30 @@
 
       const { activeUserId } = configSnap.data();
 
+      // Check bedtime schedule before showing anything
+      const schedSnap = await getDoc(doc(db, "users", activeUserId, "status", "schedule")).catch(() => null);
+      if (schedSnap && schedSnap.exists()) {
+        const s = schedSnap.data();
+        let blocked = false;
+        if (s.forceStopped) blocked = true;
+        else if (s.enabled && s.bedtime) {
+          const now = new Date();
+          const nowMins = now.getHours() * 60 + now.getMinutes();
+          const [h, m] = s.bedtime.split(":").map(Number);
+          if (nowMins >= h * 60 + m) blocked = true;
+        }
+        if (blocked) {
+          subtitle.textContent = "See you tomorrow!";
+          grid.innerHTML = `
+            <div class="col-span-full flex flex-col items-center py-24 gap-4">
+              <div class="text-8xl">🌙</div>
+              <p class="text-white text-2xl font-bold">Time to stop watching!</p>
+              <p class="text-blue-100 text-center">${s.forceStopped ? "A parent has stopped watching for now." : "It's bedtime. See you tomorrow!"}</p>
+            </div>`;
+          return;
+        }
+      }
+
       // Load that user's approved channels
       const snap = await getDocs(
         query(collection(db, "users", activeUserId, "channels"), orderBy("addedAt", "asc"))

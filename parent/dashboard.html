@@ -38,6 +38,19 @@
     </div>
   </header>
 
+  <!-- Stopped banner -->
+  <div id="stopped-banner" class="hidden bg-orange-500 text-white px-4 py-3 shadow-md">
+    <div class="max-w-4xl mx-auto flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <span class="text-xl">🛑</span>
+        <span class="font-semibold text-sm sm:text-base">Watching is stopped — kids are blocked</span>
+      </div>
+      <button id="banner-resume-btn" class="flex-shrink-0 bg-white text-orange-600 hover:bg-orange-50 font-bold px-5 py-2 rounded-xl text-sm transition-colors">
+        ▶ Resume
+      </button>
+    </div>
+  </div>
+
   <div class="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-8">
 
     <!-- Now Watching -->
@@ -561,21 +574,25 @@
       const statusEl   = document.getElementById("schedule-status");
       const stopBtn    = document.getElementById("stop-now-btn");
       const resumeBtn  = document.getElementById("resume-btn");
+      const banner     = document.getElementById("stopped-banner");
       if (s.forceStopped) {
         statusEl.textContent = "🛑 Watching stopped — kids are blocked";
         statusEl.className   = "text-sm text-red-500 mt-0.5";
         stopBtn.classList.add("hidden");
         resumeBtn.classList.remove("hidden");
+        banner.classList.remove("hidden");
       } else if (s.enabled && s.bedtime) {
         statusEl.textContent = `Bedtime set for ${formatTime(s.bedtime)} — kids can watch until then`;
         statusEl.className   = "text-sm text-blue-500 mt-0.5";
         stopBtn.classList.remove("hidden");
         resumeBtn.classList.add("hidden");
+        banner.classList.add("hidden");
       } else {
         statusEl.textContent = "Kids can watch freely";
         statusEl.className   = "text-sm text-gray-500 mt-0.5";
         stopBtn.classList.remove("hidden");
         resumeBtn.classList.add("hidden");
+        banner.classList.add("hidden");
       }
     }
 
@@ -606,11 +623,14 @@
     document.getElementById("stop-now-btn").addEventListener("click", stopNow);
     document.getElementById("nw-stop-btn").addEventListener("click", stopNow);
 
-    document.getElementById("resume-btn").addEventListener("click", async () => {
+    async function resumeNow() {
       await setDoc(scheduleRef(), { forceStopped: false }, { merge: true });
       const snap = await getDoc(scheduleRef());
       updateScheduleUI(snap.data());
-    });
+    }
+
+    document.getElementById("resume-btn").addEventListener("click", resumeNow);
+    document.getElementById("banner-resume-btn").addEventListener("click", resumeNow);
   </script>
 </body>
 </html>

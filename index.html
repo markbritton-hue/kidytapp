@@ -44,13 +44,16 @@
           <span class="text-gray-700 text-sm pt-0.5">Add the <strong>YouTube channels</strong> you want your child to watch</span>
         </li>
       </ol>
-      <button id="setup-dismiss" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-2xl text-base transition-colors">
-        Got it!
+      <button id="setup-create" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-2xl text-base transition-colors mb-3">
+        Create Account
+      </button>
+      <button id="setup-dismiss" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold py-3 rounded-2xl text-base transition-colors">
+        I already have an account
       </button>
     </div>
   </div>
 
-  <!-- Parent login modal -->
+  <!-- Parent login / create account modal -->
   <div id="parent-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
     <div class="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-sm relative">
       <button id="modal-close" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl font-bold leading-none">&times;</button>
@@ -58,20 +61,25 @@
         <img src="public/logo.svg" alt="Viddy" class="w-12 h-12" />
       </div>
       <div class="text-center mb-5">
-        <h2 class="text-xl font-extrabold text-gray-800">Parent Zone</h2>
-        <p class="text-gray-500 text-sm mt-1">Sign in to manage Viddy</p>
+        <h2 id="modal-title" class="text-xl font-extrabold text-gray-800">Parent Zone</h2>
+        <p id="modal-subtitle" class="text-gray-500 text-sm mt-1">Sign in to manage Viddy</p>
       </div>
       <form id="modal-form" class="space-y-3">
         <input id="modal-username" type="text" placeholder="Username" autocomplete="username"
           class="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-blue-400 transition-colors text-sm" />
         <input id="modal-password" type="password" placeholder="Password" autocomplete="current-password"
           class="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-blue-400 transition-colors text-sm" />
+        <input id="modal-confirm" type="password" placeholder="Confirm password" autocomplete="new-password"
+          class="hidden w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-blue-400 transition-colors text-sm" />
         <p id="modal-error" class="hidden text-red-600 text-sm text-center font-medium"></p>
-        <button type="submit"
+        <button type="submit" id="modal-submit"
           class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-2xl text-base transition-colors disabled:opacity-50">
           Sign In
         </button>
       </form>
+      <p class="text-center mt-4 text-sm text-gray-500">
+        <button id="modal-toggle" class="text-blue-600 hover:underline font-medium">Create a new account</button>
+      </p>
     </div>
   </div>
 
@@ -96,7 +104,7 @@
     import {
       doc, getDoc, collection, getDocs, query, orderBy, setDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-    import { signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
     const COLORS = [
       "from-blue-400 to-purple-500",
@@ -192,30 +200,55 @@
     });
 
     // ── First-time setup modal ────────────────────────────────────────────────
-    // Show on first visit to this browser — localStorage resets when browser data is cleared
     if (!localStorage.getItem("viddy-seen")) {
       document.getElementById("setup-modal").classList.remove("hidden");
     }
 
+    function openParentModal(createMode = false) {
+      setModalMode(createMode);
+      document.getElementById("modal-error").classList.add("hidden");
+      document.getElementById("modal-username").value = "";
+      document.getElementById("modal-password").value = "";
+      document.getElementById("modal-confirm").value = "";
+      document.getElementById("parent-modal").classList.remove("hidden");
+      document.getElementById("modal-username").focus();
+    }
+
+    document.getElementById("setup-create").addEventListener("click", () => {
+      localStorage.setItem("viddy-seen", "1");
+      document.getElementById("setup-modal").classList.add("hidden");
+      openParentModal(true);
+    });
+
     document.getElementById("setup-dismiss").addEventListener("click", () => {
       localStorage.setItem("viddy-seen", "1");
       document.getElementById("setup-modal").classList.add("hidden");
+      openParentModal(false);
     });
 
     // ── Parent Zone modal ─────────────────────────────────────────────────────
-    // Always sign out any lingering session so login is always required
     signOut(auth).catch(() => {});
 
     const modal    = document.getElementById("parent-modal");
     const modalErr = document.getElementById("modal-error");
+    let isCreateMode = false;
 
-    document.getElementById("parent-zone-btn").addEventListener("click", () => {
-      modal.classList.remove("hidden");
+    function setModalMode(create) {
+      isCreateMode = create;
+      document.getElementById("modal-title").textContent    = create ? "Create Account" : "Parent Zone";
+      document.getElementById("modal-subtitle").textContent = create ? "Set up your parent account" : "Sign in to manage Viddy";
+      document.getElementById("modal-submit").textContent   = create ? "Create Account" : "Sign In";
+      document.getElementById("modal-toggle").textContent   = create ? "Already have an account? Sign in" : "Create a new account";
+      const confirm = document.getElementById("modal-confirm");
+      confirm.classList.toggle("hidden", !create);
+    }
+
+    document.getElementById("modal-toggle").addEventListener("click", () => {
+      setModalMode(!isCreateMode);
       modalErr.classList.add("hidden");
-      document.getElementById("modal-username").value = "";
-      document.getElementById("modal-password").value = "";
-      document.getElementById("modal-username").focus();
     });
+
+    document.getElementById("parent-zone-btn").addEventListener("click", () => openParentModal(false));
 
     document.getElementById("modal-close").addEventListener("click", () => {
       modal.classList.add("hidden");
@@ -229,27 +262,42 @@
       e.preventDefault();
       const username = document.getElementById("modal-username").value.trim();
       const password = document.getElementById("modal-password").value;
-      const btn = e.submitter;
+      const confirm  = document.getElementById("modal-confirm").value;
+      const btn      = document.getElementById("modal-submit");
 
       modalErr.classList.add("hidden");
       if (!username || !password) return;
 
+      if (isCreateMode && password !== confirm) {
+        modalErr.textContent = "Passwords do not match.";
+        modalErr.classList.remove("hidden");
+        return;
+      }
+
       btn.disabled = true;
-      btn.textContent = "Signing in…";
+      btn.textContent = isCreateMode ? "Creating…" : "Signing in…";
 
       try {
-        const cred = await signInWithEmailAndPassword(auth, usernameToEmail(username), password);
+        let cred;
+        if (isCreateMode) {
+          cred = await createUserWithEmailAndPassword(auth, usernameToEmail(username), password);
+        } else {
+          cred = await signInWithEmailAndPassword(auth, usernameToEmail(username), password);
+        }
         await setDoc(doc(db, "config", "settings"), {
           activeUserId: cred.user.uid,
           username,
           parentSetup: true,
         }, { merge: true });
         location.href = "parent/dashboard.html";
-      } catch {
-        modalErr.textContent = "Incorrect username or password.";
+      } catch (err) {
+        const msg = isCreateMode
+          ? (err.code === "auth/email-already-in-use" ? "That username is already taken." : "Could not create account. Try a different username.")
+          : "Incorrect username or password.";
+        modalErr.textContent = msg;
         modalErr.classList.remove("hidden");
         btn.disabled = false;
-        btn.textContent = "Sign In";
+        btn.textContent = isCreateMode ? "Create Account" : "Sign In";
       }
     });
   </script>

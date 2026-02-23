@@ -272,17 +272,9 @@
                 || xmlDoc.querySelector("feed > title")?.textContent
                 || channelId;
 
-      // Thumbnail: try to get channel avatar from page, fall back to first video thumbnail
-      let thumbnail = "";
-      const pageHtml = await fetchViaProxy(`https://www.youtube.com/channel/${channelId}`);
-      if (pageHtml) {
-        const m = pageHtml.match(/<meta property="og:image" content="([^"]+)"/);
-        if (m) thumbnail = m[1];
-      }
-      if (!thumbnail) {
-        const firstId = xmlDoc.querySelector("entry > id")?.textContent?.replace("yt:video:", "");
-        if (firstId) thumbnail = `https://i.ytimg.com/vi/${firstId}/mqdefault.jpg`;
-      }
+      // Thumbnail: use the first video's thumbnail (no extra proxy call needed)
+      const firstId = xmlDoc.querySelector("entry > id")?.textContent?.replace("yt:video:", "");
+      const thumbnail = firstId ? `https://i.ytimg.com/vi/${firstId}/mqdefault.jpg` : "";
 
       return { id: channelId, name, thumbnail };
     }

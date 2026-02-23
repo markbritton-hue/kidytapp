@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Viddy" />
+  <meta name="theme-color" content="#38bdf8" />
+  <title>Viddy — How It Works</title>
+  <link rel="icon" href="public/favicon.svg" type="image/svg+xml" />
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gray-50">
+
+  <header class="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <img src="public/logo.svg" alt="Viddy" class="w-8 h-8" />
+        <h1 class="text-lg font-extrabold text-gray-800">How Viddy Works</h1>
+      </div>
+      <a href="index.html" class="text-sm text-blue-600 hover:underline font-medium">← Back to Viddy</a>
+    </div>
+  </header>
+
+  <div class="max-w-3xl mx-auto px-4 sm:px-6 py-10 space-y-10">
+
+    <!-- Intro -->
+    <section class="text-center py-4">
+      <div class="text-7xl mb-4">📺</div>
+      <h2 class="text-3xl font-extrabold text-gray-800 mb-3">Safe YouTube for Kids</h2>
+      <p class="text-gray-500 text-lg max-w-xl mx-auto">Viddy lets kids watch YouTube channels you approve — and gives you full control over what they watch and when.</p>
+    </section>
+
+    <!-- How it works steps -->
+    <section class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+      <div class="px-6 py-5 border-b border-gray-100">
+        <h3 class="text-lg font-bold text-gray-800">Getting Started</h3>
+      </div>
+      <div class="divide-y divide-gray-100">
+        <div class="flex gap-5 px-6 py-5">
+          <div class="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 text-blue-600 font-extrabold text-lg flex items-center justify-center">1</div>
+          <div>
+            <p class="font-semibold text-gray-800">Create a parent account</p>
+            <p class="text-sm text-gray-500 mt-1">Tap <strong>🔒 Parent Zone</strong> on the home screen and create a username and password. This is your private account — kids don't need to know it.</p>
+          </div>
+        </div>
+        <div class="flex gap-5 px-6 py-5">
+          <div class="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 text-blue-600 font-extrabold text-lg flex items-center justify-center">2</div>
+          <div>
+            <p class="font-semibold text-gray-800">Add approved channels</p>
+            <p class="text-sm text-gray-500 mt-1">In the Parent Zone dashboard, add YouTube channels you're happy for your child to watch. You can use the suggested channels or paste any YouTube channel URL. Only these channels will appear for kids.</p>
+          </div>
+        </div>
+        <div class="flex gap-5 px-6 py-5">
+          <div class="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 text-blue-600 font-extrabold text-lg flex items-center justify-center">3</div>
+          <div>
+            <p class="font-semibold text-gray-800">Hand the device to your child</p>
+            <p class="text-sm text-gray-500 mt-1">The home screen shows only your approved channels. Kids can browse videos and tap to watch — nothing outside your list is accessible.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Parental controls -->
+    <section class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+      <div class="px-6 py-5 border-b border-gray-100">
+        <h3 class="text-lg font-bold text-gray-800">Parental Controls</h3>
+      </div>
+      <div class="divide-y divide-gray-100">
+        <div class="flex gap-5 px-6 py-5">
+          <div class="flex-shrink-0 text-2xl">🛑</div>
+          <div>
+            <p class="font-semibold text-gray-800">Stop Now</p>
+            <p class="text-sm text-gray-500 mt-1">Instantly blocks the screen on the kids' device. The video stops and a "watching stopped" message appears. Kids can't do anything until you tap <strong>Resume</strong>.</p>
+          </div>
+        </div>
+        <div class="flex gap-5 px-6 py-5">
+          <div class="flex-shrink-0 text-2xl">🌙</div>
+          <div>
+            <p class="font-semibold text-gray-800">Bedtime Schedule</p>
+            <p class="text-sm text-gray-500 mt-1">Set a daily bedtime time. Once that time is reached the app automatically shows a bedtime screen and blocks further watching until the next day.</p>
+          </div>
+        </div>
+        <div class="flex gap-5 px-6 py-5">
+          <div class="flex-shrink-0 text-2xl">👁️</div>
+          <div>
+            <p class="font-semibold text-gray-800">Watch Activity</p>
+            <p class="text-sm text-gray-500 mt-1">The dashboard shows what your child is currently watching in real time, plus a history of everything they've watched and how long they spent on each video.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Remote control -->
+    <section class="bg-blue-50 border border-blue-200 rounded-2xl overflow-hidden">
+      <div class="px-6 py-5 border-b border-blue-100">
+        <h3 class="text-lg font-bold text-blue-800">📱 Control From Any Device</h3>
+      </div>
+      <div class="px-6 py-5 space-y-3 text-sm text-blue-900">
+        <p>You don't need to be in the same room to control Viddy. Because your account is stored in the cloud, you can log into the <strong>Parent Zone from any device</strong> — your phone, tablet, or computer — using the same username and password.</p>
+        <p>From there you can:</p>
+        <ul class="list-disc pl-5 space-y-1 text-blue-800">
+          <li>See what your child is watching right now</li>
+          <li>Hit <strong>Stop Now</strong> to instantly block their screen</li>
+          <li>Hit <strong>Resume</strong> to let them continue</li>
+          <li>Add or remove approved channels</li>
+          <li>Check their watch history</li>
+        </ul>
+        <p class="pt-1">Everything updates in real time — the kids' device reacts within seconds of you making a change.</p>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+      <div class="px-6 py-5 border-b border-gray-100">
+        <h3 class="text-lg font-bold text-gray-800">Common Questions</h3>
+      </div>
+      <div class="divide-y divide-gray-100">
+        <div class="px-6 py-5">
+          <p class="font-semibold text-gray-800">Can kids access YouTube directly?</p>
+          <p class="text-sm text-gray-500 mt-1">Viddy only shows channels you've approved. However, Viddy is a web app — it doesn't replace parental controls at the device or browser level. For full protection, use it alongside your device's built-in screen time settings.</p>
+        </div>
+        <div class="px-6 py-5">
+          <p class="font-semibold text-gray-800">Does it work on all devices?</p>
+          <p class="text-sm text-gray-500 mt-1">Yes — Viddy works on any device with a modern browser (iPad, Android tablet, phone, computer). You can install it to the home screen as an app on both iOS and Android.</p>
+        </div>
+        <div class="px-6 py-5">
+          <p class="font-semibold text-gray-800">How do I install it to the home screen?</p>
+          <p class="text-sm text-gray-500 mt-1">On iPhone/iPad: tap the Share button in Safari then choose <strong>Add to Home Screen</strong>. On Android: tap the browser menu and choose <strong>Install app</strong> or <strong>Add to Home Screen</strong>.</p>
+        </div>
+        <div class="px-6 py-5">
+          <p class="font-semibold text-gray-800">Can I have multiple parent accounts?</p>
+          <p class="text-sm text-gray-500 mt-1">Each account has its own set of approved channels and controls. Whichever parent account last signed in to the dashboard is the one the kids' home screen shows channels for.</p>
+        </div>
+      </div>
+    </section>
+
+    <div class="text-center pb-4">
+      <a href="index.html" class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 py-3 rounded-2xl transition-colors">
+        ← Back to Viddy
+      </a>
+    </div>
+
+  </div>
+</body>
+</html>

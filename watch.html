@@ -56,16 +56,6 @@
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowfullscreen>
         </iframe>
-        <!-- Tap-to-play overlay — required on iOS Safari where iframe autoplay is blocked -->
-        <div id="play-overlay" class="absolute inset-0 rounded-xl overflow-hidden cursor-pointer flex items-center justify-center bg-black">
-          <img id="overlay-thumb" src="" alt="" class="absolute inset-0 w-full h-full object-cover opacity-60" />
-          <div class="relative z-10 flex flex-col items-center gap-4">
-            <div class="w-24 h-24 rounded-full bg-white/90 flex items-center justify-center shadow-2xl active:scale-95 transition-transform">
-              <div class="ml-2 border-t-[22px] border-b-[22px] border-l-[36px] border-transparent border-l-gray-900"></div>
-            </div>
-            <p id="overlay-title" class="text-white text-base font-semibold text-center max-w-sm px-4 drop-shadow-lg line-clamp-2"></p>
-          </div>
-        </div>
       </div>
     </div>
   </div>
@@ -91,27 +81,8 @@
       document.getElementById("back-btn").href = `channel.html?id=${from}${uid ? "&uid=" + uid : ""}`;
     }
 
-    const playerSrc =
+    document.getElementById("player").src =
       `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1&autoplay=1`;
-
-    // iOS Safari blocks iframe autoplay with sound — detect and show overlay instead.
-    // iPad on iOS 13+ reports as MacIntel but has touch points.
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-                  (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-
-    const playOverlay = document.getElementById("play-overlay");
-
-    if (isIOS) {
-      document.getElementById("overlay-thumb").src = `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
-      document.getElementById("overlay-title").textContent = videoTitle;
-      playOverlay.addEventListener("click", () => {
-        playOverlay.style.display = "none";
-        document.getElementById("player").src = playerSrc;
-      });
-    } else {
-      playOverlay.style.display = "none";
-      document.getElementById("player").src = playerSrc;
-    }
 
     // ── Watch tracking + bedtime enforcement ──────────────────────────────────
     if (uid) {
@@ -178,7 +149,6 @@
         if (!isBedtime(schedule) || overlayShown) return;
         overlayShown = true;
         document.getElementById("player").src = "";
-        document.getElementById("play-overlay").style.display = "none";
         const bedtimeOverlay = document.getElementById("bedtime-overlay");
         const msg = document.getElementById("bedtime-msg");
         msg.textContent = schedule.forceStopped

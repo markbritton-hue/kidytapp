@@ -60,7 +60,7 @@
 
   <script type="module">
     import { db } from "./js/firebase-config.js";
-    import { doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { doc, setDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const params = new URLSearchParams(location.search);
     const videoId    = params.get("v");

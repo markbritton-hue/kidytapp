@@ -76,7 +76,7 @@
       </div>
       <div class="px-6 py-4 divide-y divide-gray-100">
         <div class="flex items-center gap-4 py-4">
-          <div class="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center text-3xl flex-shrink-0">🎓</div>
+          <img id="suggest-avatar-pbs" src="" alt="PBS Kids" class="w-14 h-14 rounded-full object-cover flex-shrink-0 bg-gray-100" />
           <div class="flex-1 min-w-0">
             <p class="font-semibold text-gray-800">PBS Kids</p>
             <p class="text-xs text-gray-400">Educational kids content</p>
@@ -87,7 +87,7 @@
           </button>
         </div>
         <div class="flex items-center gap-4 py-4">
-          <div class="w-14 h-14 rounded-full bg-yellow-100 flex items-center justify-center text-3xl flex-shrink-0">🎨</div>
+          <img id="suggest-avatar-kidscrew" src="" alt="Kids Crew" class="w-14 h-14 rounded-full object-cover flex-shrink-0 bg-gray-100" />
           <div class="flex-1 min-w-0">
             <p class="font-semibold text-gray-800">Kids Crew</p>
             <p class="text-xs text-gray-400">Songs, stories &amp; fun</p>
@@ -98,7 +98,7 @@
           </button>
         </div>
         <div class="flex items-center gap-4 py-4">
-          <div class="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center text-3xl flex-shrink-0">🐕</div>
+          <img id="suggest-avatar-bluey" src="" alt="Bluey" class="w-14 h-14 rounded-full object-cover flex-shrink-0 bg-gray-100" />
           <div class="flex-1 min-w-0">
             <p class="font-semibold text-gray-800">Bluey</p>
             <p class="text-xs text-gray-400">The beloved animated series</p>
@@ -237,6 +237,7 @@
       loadActivity();
       watchNowPlaying(user.uid);
       loadSchedule(user.uid);
+      loadSuggestedAvatars();
     });
 
     // ── Logout ─────────────────────────────────────────────────────────────────
@@ -297,6 +298,30 @@
       await deleteDoc(doc(db, "users", currentUser.uid, "channels", id));
       loadChannels();
     };
+
+    // ── Load suggested channel avatars ────────────────────────────────────────
+    async function fetchChannelAvatar(input) {
+      const url = input.startsWith('UC')
+        ? `https://www.youtube.com/channel/${input}`
+        : `https://www.youtube.com/@${input.replace(/^@/, '')}`;
+      const html = await fetchViaProxy(url);
+      if (!html) return null;
+      const m = html.match(/<meta property="og:image" content="([^"]+)"/);
+      return m ? m[1] : null;
+    }
+
+    async function loadSuggestedAvatars() {
+      const entries = [
+        { id: 'suggest-avatar-pbs',      input: 'UCrNnk0wFBnCS1awGjq_ijGQ' },
+        { id: 'suggest-avatar-kidscrew', input: '@kidcrew' },
+        { id: 'suggest-avatar-bluey',    input: 'UCVzLLZkDuFGAE2BGdBuBNBg' },
+      ];
+      for (const { id, input } of entries) {
+        fetchChannelAvatar(input).then(url => {
+          if (url) document.getElementById(id).src = url;
+        }).catch(() => {});
+      }
+    }
 
     // ── Quick-add a suggested channel ──────────────────────────────────────────
     window.quickAdd = async (input, btn) => {

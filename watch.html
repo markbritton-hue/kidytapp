@@ -89,16 +89,27 @@
       document.getElementById("back-btn").href = `channel.html?id=${from}${uid ? "&uid=" + uid : ""}`;
     }
 
-    // Populate tap-to-play overlay
-    const playOverlay = document.getElementById("play-overlay");
-    document.getElementById("overlay-thumb").src = `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
-    document.getElementById("overlay-title").textContent = videoTitle;
+    const playerSrc =
+      `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1&autoplay=1`;
 
-    playOverlay.addEventListener("click", () => {
+    // iOS Safari blocks iframe autoplay with sound — detect and show overlay instead.
+    // iPad on iOS 13+ reports as MacIntel but has touch points.
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                  (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+    const playOverlay = document.getElementById("play-overlay");
+
+    if (isIOS) {
+      document.getElementById("overlay-thumb").src = `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
+      document.getElementById("overlay-title").textContent = videoTitle;
+      playOverlay.addEventListener("click", () => {
+        playOverlay.style.display = "none";
+        document.getElementById("player").src = playerSrc;
+      });
+    } else {
       playOverlay.style.display = "none";
-      document.getElementById("player").src =
-        `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1&autoplay=1`;
-    });
+      document.getElementById("player").src = playerSrc;
+    }
 
     // ── Watch tracking + bedtime enforcement ──────────────────────────────────
     if (uid) {

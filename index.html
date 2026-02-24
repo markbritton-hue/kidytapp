@@ -204,11 +204,10 @@
       document.getElementById("subtitle").textContent = "Error loading channels. Check your connection.";
     });
 
-    // Hide "Create Account" option if a parent account already exists
+    // Hide "Create Account" toggle inside the login modal if an account already exists
     getDoc(doc(db, "config", "settings")).then(snap => {
       if (snap.exists() && snap.data().parentSetup) {
         document.getElementById("modal-toggle").classList.add("hidden");
-        document.getElementById("setup-create").classList.add("hidden");
       }
     }).catch(() => {});
 

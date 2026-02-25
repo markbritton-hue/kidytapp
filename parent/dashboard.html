@@ -259,6 +259,7 @@
       watchNowPlaying(user.uid);
       loadSchedule(user.uid);
       loadSuggestedAvatars();
+      upgradeThumbnails();
     });
 
     // ── Logout ─────────────────────────────────────────────────────────────────
@@ -320,18 +321,56 @@
       loadChannels();
     };
 
+    // ── Extract profile picture from a fetched channel page ───────────────────
+    function extractAvatar(html) {
+      for (const pat of [
+        /<meta[^>]+property="og:image"[^>]*content="([^"]+)"/,
+        /<meta[^>]+content="([^"]+)"[^>]+property="og:image"/,
+        /"avatar":\{"thumbnails":\[\{"url":"([^"]+)"/,
+        /"channelAvatarUrl":"([^"]+)"/,
+      ]) {
+        const m = html.match(pat);
+        if (m) {
+          const url = m[1].replace(/\\\//g, '/');
+          if (url.startsWith('http')) return url;
+        }
+      }
+      return null;
+    }
+
     // ── Load suggested channel avatars ────────────────────────────────────────
     function loadSuggestedAvatars() {
       const entries = [
-        { id: 'suggest-avatar-pbs',      input: 'UCrNnk0wFBnCS1awGjq_ijGQ' },
-        { id: 'suggest-avatar-kidscrew', input: '@kidcrew' },
-        { id: 'suggest-avatar-bluey',    input: 'UCVzLLZkDuFGAE2BGdBuBNBg' },
+        { id: 'suggest-avatar-pbs',      url: 'https://www.youtube.com/channel/UCrNnk0wFBnCS1awGjq_ijGQ' },
+        { id: 'suggest-avatar-kidscrew', url: 'https://www.youtube.com/@kidcrew' },
+        { id: 'suggest-avatar-bluey',    url: 'https://www.youtube.com/channel/UCVzLLZkDuFGAE2BGdBuBNBg' },
       ];
-      for (const { id, input } of entries) {
-        resolveChannel(input).then(ch => {
-          if (ch.thumbnail) document.getElementById(id).src = ch.thumbnail;
+      for (const { id, url } of entries) {
+        fetchViaProxy(url).then(html => {
+          if (!html) return;
+          const avatar = extractAvatar(html);
+          if (avatar) document.getElementById(id).src = avatar;
         }).catch(() => {});
       }
+    }
+
+    // ── Upgrade stored video thumbnails to channel profile pictures ───────────
+    async function upgradeThumbnails() {
+      const snap = await getDocs(query(channelsCol(), orderBy("addedAt", "asc"))).catch(() => null);
+      if (!snap || snap.empty) return;
+      let updated = false;
+      for (const docSnap of snap.docs) {
+        const ch = docSnap.data();
+        if (ch.thumbnail && !ch.thumbnail.includes('i.ytimg.com')) continue;
+        const html = await fetchViaProxy(`https://www.youtube.com/channel/${ch.id}`);
+        if (!html) continue;
+        const avatar = extractAvatar(html);
+        if (avatar) {
+          await setDoc(doc(db, "users", currentUser.uid, "channels", ch.id), { thumbnail: avatar }, { merge: true });
+          updated = true;
+        }
+      }
+      if (updated) loadChannels();
     }
 
     // ── Quick-add a suggested channel ──────────────────────────────────────────

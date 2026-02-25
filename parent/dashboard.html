@@ -407,30 +407,30 @@
                 || xmlDoc.querySelector("feed > title")?.textContent
                 || channelId;
 
-      // Get the channel's profile picture from the channel page
+      // Start with the first video thumbnail as a reliable fallback
+      const firstId = xmlDoc.querySelector("entry > id")?.textContent?.replace("yt:video:", "");
+      let thumbnail = firstId ? `https://i.ytimg.com/vi/${firstId}/mqdefault.jpg` : "";
+
+      // Try to upgrade to the channel's profile picture from the channel page
       if (!pageHtml) {
         pageHtml = await fetchViaProxy(`https://www.youtube.com/channel/${channelId}`);
       }
 
-      let thumbnail = "";
       if (pageHtml) {
         for (const pat of [
-          // og:image meta tag — server-rendered, always clean (no JSON escaping)
-          /<meta[^>]+property="og:image"[^>]*content="(https:\/\/yt3\.googleusercontent\.com\/[^"]+)"/,
-          /<meta[^>]+content="(https:\/\/yt3\.googleusercontent\.com\/[^"]+)"[^>]+property="og:image"/,
+          // og:image meta tag — server-rendered, no JSON escaping, accepts any CDN
+          /<meta[^>]+property="og:image"[^>]*content="(https?:\/\/[^"]+)"/,
+          /<meta[^>]+content="(https?:\/\/[^"]+)"[^>]+property="og:image"/,
           // JSON data patterns (URLs may be backslash-escaped as \/)
-          /"avatar":\{"thumbnails":\[\{"url":"(https?:(?:\\\/|\/){2}yt3\.googleusercontent\.com[^"]+)"/,
-          /"channelAvatarUrl":"(https?:(?:\\\/|\/){2}yt3\.googleusercontent\.com[^"]+)"/,
+          /"avatar":\{"thumbnails":\[\{"url":"(https?:[^"]+)"/,
+          /"channelAvatarUrl":"(https?:[^"]+)"/,
         ]) {
           const m = pageHtml.match(pat);
-          if (m) { thumbnail = m[1].replace(/\\\//g, '/'); break; }
+          if (m) {
+            const url = m[1].replace(/\\\//g, '/');
+            if (url.startsWith('http')) { thumbnail = url; break; }
+          }
         }
-      }
-
-      // Fall back to first video thumbnail if profile picture not found
-      if (!thumbnail) {
-        const firstId = xmlDoc.querySelector("entry > id")?.textContent?.replace("yt:video:", "");
-        thumbnail = firstId ? `https://i.ytimg.com/vi/${firstId}/mqdefault.jpg` : "";
       }
 
       return { id: channelId, name, thumbnail };

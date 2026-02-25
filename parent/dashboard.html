@@ -415,12 +415,15 @@
       let thumbnail = "";
       if (pageHtml) {
         for (const pat of [
-          /"avatar":\{"thumbnails":\[\{"url":"(https:\/\/yt3\.googleusercontent\.com\/[^"]+)"/,
-          /"channelAvatarUrl":"(https:\/\/yt3\.googleusercontent\.com\/[^"]+)"/,
-          /"width":88,"height":88\}[^}]*\}[^}]*"url":"(https:\/\/yt3\.googleusercontent\.com\/[^"]+)"/,
+          // og:image meta tag — server-rendered, always clean (no JSON escaping)
+          /<meta[^>]+property="og:image"[^>]*content="(https:\/\/yt3\.googleusercontent\.com\/[^"]+)"/,
+          /<meta[^>]+content="(https:\/\/yt3\.googleusercontent\.com\/[^"]+)"[^>]+property="og:image"/,
+          // JSON data patterns (URLs may be backslash-escaped as \/)
+          /"avatar":\{"thumbnails":\[\{"url":"(https?:(?:\\\/|\/){2}yt3\.googleusercontent\.com[^"]+)"/,
+          /"channelAvatarUrl":"(https?:(?:\\\/|\/){2}yt3\.googleusercontent\.com[^"]+)"/,
         ]) {
           const m = pageHtml.match(pat);
-          if (m) { thumbnail = m[1]; break; }
+          if (m) { thumbnail = m[1].replace(/\\\//g, '/'); break; }
         }
       }
 

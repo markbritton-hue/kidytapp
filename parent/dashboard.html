@@ -374,6 +374,7 @@
     async function resolveChannel(input) {
       input = input.trim();
       let channelId = null;
+      let pageHtml = null;
 
       // Extract channel ID if already present in the input
       const urlIdMatch = input.match(/\/channel\/(UC[\w-]{22})/);
@@ -387,17 +388,17 @@
                    : input.startsWith("@") ? input.slice(1)
                    : input;
 
-        const html = await fetchViaProxy(`https://www.youtube.com/@${handle}`);
-        if (!html) throw new Error("Could not reach YouTube. Paste the channel ID instead (it starts with UC… and can be found via the channel's Share menu).");
+        pageHtml = await fetchViaProxy(`https://www.youtube.com/@${handle}`);
+        if (!pageHtml) throw new Error("Could not reach YouTube. Paste the channel ID instead (it starts with UC… and can be found via the channel's Share menu).");
 
         for (const p of [/"channelId":"(UC[\w-]{22})"/, /"externalId":"(UC[\w-]{22})"/, /channel_id=(UC[\w-]{22})/, /"browseId":"(UC[\w-]{22})"/]) {
-          const m = html.match(p);
+          const m = pageHtml.match(p);
           if (m) { channelId = m[1]; break; }
         }
         if (!channelId) throw new Error("Channel found but ID could not be read. Paste the channel ID instead (starts with UC…).");
       }
 
-      // Get channel name + thumbnail from the RSS feed — more reliable than scraping the page
+      // Get channel name from the RSS feed — more reliable than scraping the page
       const rssXml = await fetchViaProxy(`https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`);
       if (!rssXml) throw new Error("Channel ID looks valid but could not load its feed. Check the ID and try again.");
 
@@ -406,9 +407,28 @@
                 || xmlDoc.querySelector("feed > title")?.textContent
                 || channelId;
 
-      // Thumbnail: use the first video's thumbnail (no extra proxy call needed)
-      const firstId = xmlDoc.querySelector("entry > id")?.textContent?.replace("yt:video:", "");
-      const thumbnail = firstId ? `https://i.ytimg.com/vi/${firstId}/mqdefault.jpg` : "";
+      // Get the channel's profile picture from the channel page
+      if (!pageHtml) {
+        pageHtml = await fetchViaProxy(`https://www.youtube.com/channel/${channelId}`);
+      }
+
+      let thumbnail = "";
+      if (pageHtml) {
+        for (const pat of [
+          /"avatar":\{"thumbnails":\[\{"url":"(https:\/\/yt3\.googleusercontent\.com\/[^"]+)"/,
+          /"channelAvatarUrl":"(https:\/\/yt3\.googleusercontent\.com\/[^"]+)"/,
+          /"width":88,"height":88\}[^}]*\}[^}]*"url":"(https:\/\/yt3\.googleusercontent\.com\/[^"]+)"/,
+        ]) {
+          const m = pageHtml.match(pat);
+          if (m) { thumbnail = m[1]; break; }
+        }
+      }
+
+      // Fall back to first video thumbnail if profile picture not found
+      if (!thumbnail) {
+        const firstId = xmlDoc.querySelector("entry > id")?.textContent?.replace("yt:video:", "");
+        thumbnail = firstId ? `https://i.ytimg.com/vi/${firstId}/mqdefault.jpg` : "";
+      }
 
       return { id: channelId, name, thumbnail };
     }

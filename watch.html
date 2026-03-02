@@ -137,13 +137,18 @@
       // Write live now-playing status
       setDoc(nowPlayingRef, videoData).catch(err => console.error("[Viddy] nowPlaying write failed:", err));
 
-      // Update duration in Firestore
+      // Today's accumulated watch time (tracked in localStorage, resets each day)
+      const todayKey = `viddy-watched-${uid}-${new Date().toISOString().slice(0, 10)}`;
+      const alreadyWatchedSecs = parseInt(localStorage.getItem(todayKey) || "0", 10);
+
+      // Update duration in Firestore and localStorage
       function saveDuration() {
         const secs = Math.floor((Date.now() - startTime) / 1000);
         if (secs < 2) return;
         const update = { durationSeconds: secs, endedAt: new Date().toISOString() };
         updateDoc(sessionRef, update).catch(() => {});
         updateDoc(nowPlayingRef, { durationSeconds: secs }).catch(() => {});
+        localStorage.setItem(todayKey, alreadyWatchedSecs + secs);
       }
 
       // Clear now-playing status when leaving
@@ -175,16 +180,27 @@
         return nowMins >= h * 60 + m;
       }
 
+      function isOverTimeLimit(schedule) {
+        if (!schedule?.timeLimitEnabled || !schedule?.timeLimitMins) return false;
+        const currentSecs = Math.floor((Date.now() - startTime) / 1000);
+        return (alreadyWatchedSecs + currentSecs) >= schedule.timeLimitMins * 60;
+      }
+
       function enforceSchedule(schedule) {
-        if (!isBedtime(schedule) || overlayShown) return;
+        const blocked = isBedtime(schedule) || isOverTimeLimit(schedule);
+        if (!blocked || overlayShown) return;
         overlayShown = true;
+        saveDuration();
         document.getElementById("player").src = "";
-        const bedtimeOverlay = document.getElementById("bedtime-overlay");
         const msg = document.getElementById("bedtime-msg");
-        msg.textContent = schedule.forceStopped
-          ? "A parent has stopped watching for now."
-          : "It's bedtime. See you tomorrow!";
-        bedtimeOverlay.classList.remove("hidden");
+        if (schedule.forceStopped) {
+          msg.textContent = "A parent has stopped watching for now.";
+        } else if (isOverTimeLimit(schedule)) {
+          msg.textContent = `You've reached today's ${schedule.timeLimitMins} minute limit. See you tomorrow!`;
+        } else {
+          msg.textContent = "It's bedtime. See you tomorrow!";
+        }
+        document.getElementById("bedtime-overlay").classList.remove("hidden");
         const backBtn = document.getElementById("bedtime-back");
         if (from) backBtn.href = `channel.html?id=${from}${uid ? "&uid=" + uid : ""}`;
       }

@@ -215,7 +215,7 @@
           </button>
         </div>
       </div>
-      <div class="px-6 py-5">
+      <div class="px-6 py-5 space-y-4">
         <div class="flex flex-wrap items-center gap-4">
           <label class="flex items-center gap-3 cursor-pointer">
             <div class="relative">
@@ -227,6 +227,21 @@
           </label>
           <input id="bedtime-time" type="time" value="20:00"
             class="px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+        </div>
+        <div class="flex flex-wrap items-center gap-4 pt-1 border-t border-gray-100">
+          <label class="flex items-center gap-3 cursor-pointer">
+            <div class="relative">
+              <input id="timelimit-toggle" type="checkbox" class="sr-only peer" />
+              <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-blue-600 transition-colors"></div>
+              <div class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5"></div>
+            </div>
+            <span class="font-medium text-gray-700 text-sm">Daily Time Limit</span>
+          </label>
+          <input id="timelimit-mins" type="number" min="15" max="480" step="15" value="60"
+            class="w-20 px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+          <span class="text-sm text-gray-500">minutes per day</span>
+        </div>
+        <div>
           <button id="save-schedule-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-colors">
             Save
           </button>
@@ -670,8 +685,10 @@
     async function loadSchedule(uid) {
       const snap = await getDoc(doc(db, "users", uid, "status", "schedule")).catch(() => null);
       const s = snap && snap.exists() ? snap.data() : { enabled: false, bedtime: "20:00", forceStopped: false };
-      document.getElementById("bedtime-toggle").checked = s.enabled ?? false;
-      document.getElementById("bedtime-time").value    = s.bedtime ?? "20:00";
+      document.getElementById("bedtime-toggle").checked    = s.enabled ?? false;
+      document.getElementById("bedtime-time").value        = s.bedtime ?? "20:00";
+      document.getElementById("timelimit-toggle").checked  = s.timeLimitEnabled ?? false;
+      document.getElementById("timelimit-mins").value      = s.timeLimitMins ?? 60;
       updateScheduleUI(s);
     }
 
@@ -687,7 +704,14 @@
         resumeBtn.classList.remove("hidden");
         banner.classList.remove("hidden");
       } else if (s.enabled && s.bedtime) {
-        statusEl.textContent = `Bedtime set for ${formatTime(s.bedtime)} — kids can watch until then`;
+        const limitPart = s.timeLimitEnabled && s.timeLimitMins ? ` · ${s.timeLimitMins} min/day limit` : "";
+        statusEl.textContent = `Bedtime set for ${formatTime(s.bedtime)}${limitPart}`;
+        statusEl.className   = "text-sm text-blue-500 mt-0.5";
+        stopBtn.classList.remove("hidden");
+        resumeBtn.classList.add("hidden");
+        banner.classList.add("hidden");
+      } else if (s.timeLimitEnabled && s.timeLimitMins) {
+        statusEl.textContent = `${s.timeLimitMins} min/day limit active`;
         statusEl.className   = "text-sm text-blue-500 mt-0.5";
         stopBtn.classList.remove("hidden");
         resumeBtn.classList.add("hidden");
@@ -712,9 +736,11 @@
     }
 
     document.getElementById("save-schedule-btn").addEventListener("click", async () => {
-      const enabled = document.getElementById("bedtime-toggle").checked;
-      const bedtime = document.getElementById("bedtime-time").value;
-      const s = { enabled, bedtime, forceStopped: false };
+      const enabled          = document.getElementById("bedtime-toggle").checked;
+      const bedtime          = document.getElementById("bedtime-time").value;
+      const timeLimitEnabled = document.getElementById("timelimit-toggle").checked;
+      const timeLimitMins    = parseInt(document.getElementById("timelimit-mins").value, 10) || 60;
+      const s = { enabled, bedtime, forceStopped: false, timeLimitEnabled, timeLimitMins };
       await setDoc(scheduleRef(), s, { merge: true });
       updateScheduleUI(s);
     });

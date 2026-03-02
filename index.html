@@ -152,12 +152,21 @@
       if (schedSnap && schedSnap.exists()) {
         const s = schedSnap.data();
         let blocked = false;
-        if (s.forceStopped) blocked = true;
-        else if (s.enabled && s.bedtime) {
+        let blockMsg = "";
+        if (s.forceStopped) {
+          blocked = true; blockMsg = "A parent has stopped watching for now.";
+        } else if (s.enabled && s.bedtime) {
           const now = new Date();
           const nowMins = now.getHours() * 60 + now.getMinutes();
           const [h, m] = s.bedtime.split(":").map(Number);
-          if (nowMins >= h * 60 + m) blocked = true;
+          if (nowMins >= h * 60 + m) { blocked = true; blockMsg = "It's bedtime. See you tomorrow!"; }
+        }
+        if (!blocked && s.timeLimitEnabled && s.timeLimitMins) {
+          const todayKey = `viddy-watched-${activeUserId}-${new Date().toISOString().slice(0, 10)}`;
+          const watchedSecs = parseInt(localStorage.getItem(todayKey) || "0", 10);
+          if (watchedSecs >= s.timeLimitMins * 60) {
+            blocked = true; blockMsg = `You've reached today's ${s.timeLimitMins} minute limit. See you tomorrow!`;
+          }
         }
         if (blocked) {
           subtitle.textContent = "See you tomorrow!";
@@ -165,7 +174,7 @@
             <div class="col-span-full flex flex-col items-center py-24 gap-4">
               <div class="text-8xl">🌙</div>
               <p class="text-white text-2xl font-bold">Time to stop watching!</p>
-              <p class="text-blue-100 text-center">${s.forceStopped ? "A parent has stopped watching for now." : "It's bedtime. See you tomorrow!"}</p>
+              <p class="text-blue-100 text-center">${blockMsg}</p>
             </div>`;
           return;
         }

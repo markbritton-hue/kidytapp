@@ -704,14 +704,14 @@
         resumeBtn.classList.remove("hidden");
         banner.classList.remove("hidden");
       } else if (s.enabled && s.bedtime) {
-        const limitPart = s.timeLimitEnabled && s.timeLimitMins ? ` · ${s.timeLimitMins} min/day limit` : "";
+        const limitPart = s.timeLimitEnabled && s.timeLimitMins ? ` · ${s.timeLimitMins} minutes/day limit` : "";
         statusEl.textContent = `Bedtime set for ${formatTime(s.bedtime)}${limitPart}`;
         statusEl.className   = "text-sm text-blue-500 mt-0.5";
         stopBtn.classList.remove("hidden");
         resumeBtn.classList.add("hidden");
         banner.classList.add("hidden");
       } else if (s.timeLimitEnabled && s.timeLimitMins) {
-        statusEl.textContent = `${s.timeLimitMins} min/day limit active`;
+        statusEl.textContent = `${s.timeLimitMins} minutes/day limit active`;
         statusEl.className   = "text-sm text-blue-500 mt-0.5";
         stopBtn.classList.remove("hidden");
         resumeBtn.classList.add("hidden");

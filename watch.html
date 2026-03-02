@@ -40,10 +40,10 @@
     <span class="text-gray-400 text-sm">Viddy</span>
   </div>
 
-  <!-- Bedtime overlay -->
+  <!-- Bedtime / time-limit overlay -->
   <div id="bedtime-overlay" class="hidden fixed inset-0 bg-gray-950 z-50 flex flex-col items-center justify-center text-center p-8">
-    <div class="text-8xl mb-6">🌙</div>
-    <h2 class="text-3xl font-bold text-white mb-3">Time to stop watching!</h2>
+    <div id="overlay-emoji" class="text-8xl mb-6">🌙</div>
+    <h2 id="overlay-title" class="text-3xl font-bold text-white mb-3">Time to stop watching!</h2>
     <p id="bedtime-msg" class="text-gray-400 text-lg mb-8">It's bedtime. See you tomorrow!</p>
     <a id="bedtime-back" href="index.html" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold px-8 py-3 rounded-full transition-colors">
       ← Back
@@ -192,13 +192,21 @@
         overlayShown = true;
         saveDuration();
         document.getElementById("player").src = "";
-        const msg = document.getElementById("bedtime-msg");
+        const emoji = document.getElementById("overlay-emoji");
+        const title = document.getElementById("overlay-title");
+        const msg   = document.getElementById("bedtime-msg");
         if (schedule.forceStopped) {
-          msg.textContent = "A parent has stopped watching for now.";
+          emoji.textContent = "🛑";
+          title.textContent = "Watching stopped!";
+          msg.textContent   = "A parent has stopped watching for now.";
         } else if (isOverTimeLimit(schedule)) {
-          msg.textContent = `You've reached today's ${schedule.timeLimitMins} minute limit. See you tomorrow!`;
+          emoji.textContent = "⏰";
+          title.textContent = "Screen time is up for today!";
+          msg.textContent   = `You've reached your ${schedule.timeLimitMins} minute daily limit. See you tomorrow!`;
         } else {
-          msg.textContent = "It's bedtime. See you tomorrow!";
+          emoji.textContent = "🌙";
+          title.textContent = "Time to stop watching!";
+          msg.textContent   = "It's bedtime. See you tomorrow!";
         }
         document.getElementById("bedtime-overlay").classList.remove("hidden");
         const backBtn = document.getElementById("bedtime-back");

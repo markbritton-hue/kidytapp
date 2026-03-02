@@ -22,6 +22,10 @@
       #video-aspect { padding-bottom: 0 !important; height: 100%; }
       #player { position: static; width: 100%; height: 100%; border-radius: 0.5rem; }
     }
+    /* Hide top bar when our container is fullscreen */
+    #video-wrap:fullscreen #fullscreen-btn svg.expand { display: none; }
+    #video-wrap:fullscreen #fullscreen-btn svg.compress { display: block; }
+    #fullscreen-btn svg.compress { display: none; }
   </style>
 </head>
 <body class="min-h-screen bg-gray-950 flex flex-col">
@@ -53,16 +57,38 @@
         <iframe
           id="player"
           class="absolute inset-0 w-full h-full rounded-xl shadow-2xl"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowfullscreen>
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
         </iframe>
         <!-- Blocks clicks on the YouTube title/logo at the top of the embed player -->
         <div class="absolute top-0 left-0 right-0 z-10" style="height: 60px;"></div>
         <!-- Blocks the "Watch on YouTube" logo in the bottom-right of the player -->
         <div class="absolute bottom-0 right-0 z-10" style="width: 90px; height: 48px;"></div>
+        <!-- Custom fullscreen button — fullscreens the container so overlays stay active -->
+        <button id="fullscreen-btn" class="absolute bottom-0 z-10 flex items-center justify-center bg-black/40 hover:bg-black/60 text-white transition-colors rounded" style="right: 90px; width: 48px; height: 48px;" title="Fullscreen">
+          <svg class="expand w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+          <svg class="compress w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>
+        </button>
       </div>
     </div>
   </div>
+
+  <script>
+    // Custom fullscreen — fullscreens the container so our overlays stay active
+    const fsBtn  = document.getElementById("fullscreen-btn");
+    const fsWrap = document.getElementById("video-wrap");
+    fsBtn.addEventListener("click", () => {
+      if (!document.fullscreenElement) {
+        fsWrap.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    });
+    // Keep the icon in sync
+    document.addEventListener("fullscreenchange", () => {
+      fsBtn.querySelector(".expand").style.display   = document.fullscreenElement ? "none"  : "";
+      fsBtn.querySelector(".compress").style.display = document.fullscreenElement ? ""      : "none";
+    });
+  </script>
 
   <script type="module">
     import { db } from "./js/firebase-config.js";

@@ -236,16 +236,19 @@
 
     <!-- Watch Activity -->
     <section class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-      <div class="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+      <div class="px-6 py-5 border-b border-gray-100 flex items-center justify-between gap-4">
         <div>
           <h2 class="text-lg font-bold text-gray-800">Watch Activity</h2>
           <p id="activity-summary" class="text-sm text-gray-500 mt-0.5">Loading…</p>
         </div>
-        <button id="clear-history-btn" class="text-xs text-red-400 hover:text-red-600 font-medium transition-colors">
-          Clear history
-        </button>
+        <div class="flex items-center gap-3 flex-shrink-0">
+          <button id="activity-toggle" class="hidden text-sm text-blue-500 hover:text-blue-700 font-medium transition-colors"></button>
+          <button id="clear-history-btn" class="text-xs text-red-400 hover:text-red-600 font-medium transition-colors">
+            Clear history
+          </button>
+        </div>
       </div>
-      <div id="activity-list" class="px-6 py-4 divide-y divide-gray-100"></div>
+      <div id="activity-list" class="hidden px-6 py-4 divide-y divide-gray-100"></div>
     </section>
 
     <!-- Support Viddy -->
@@ -604,33 +607,33 @@
     async function loadActivity() {
       const list    = document.getElementById("activity-list");
       const summary = document.getElementById("activity-summary");
+      const toggle  = document.getElementById("activity-toggle");
 
       const snap = await getDocs(
-        query(collection(db, "users", currentUser.uid, "watchHistory"), orderBy("startedAt", "desc"), limit(30))
+        query(collection(db, "users", currentUser.uid, "watchHistory"), orderBy("startedAt", "desc"), limit(100))
       ).catch(err => { console.error("[Viddy] loadActivity failed:", err); return null; });
 
-      if (!snap || snap.empty) {
-        summary.textContent = "No activity yet";
-        list.innerHTML = `<div class="py-10 text-center text-gray-400"><div class="text-4xl mb-2">📭</div><p>No videos watched yet.</p></div>`;
+      // Only show today's records
+      const todayPrefix = new Date().toISOString().slice(0, 10);
+      const records = snap ? snap.docs.map(d => d.data()).filter(r => r.startedAt && r.startedAt.startsWith(todayPrefix)) : [];
+      const todaySecs = records.reduce((sum, r) => sum + (r.durationSeconds || 0), 0);
+
+      if (records.length === 0) {
+        summary.textContent = "No videos watched today";
+        toggle.classList.add("hidden");
+        list.classList.add("hidden");
+        list.innerHTML = "";
         return;
       }
 
-      const records = snap.docs.map(d => d.data());
-
-      // Total time today
-      const todayPrefix = new Date().toISOString().slice(0, 10);
-      const todaySecs = records
-        .filter(r => r.startedAt && r.startedAt.startsWith(todayPrefix))
-        .reduce((sum, r) => sum + (r.durationSeconds || 0), 0);
-
       summary.textContent = todaySecs > 0
-        ? `Today: ${fmtDuration(todaySecs)} watched`
-        : "No activity today yet";
+        ? `${fmtDuration(todaySecs)} watched today`
+        : `${records.length} video${records.length === 1 ? "" : "s"} watched today`;
 
       list.innerHTML = records.map(r => {
         const dur  = fmtDuration(r.durationSeconds);
-        const date = r.startedAt
-          ? new Date(r.startedAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+        const time = r.startedAt
+          ? new Date(r.startedAt).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })
           : "";
         return `
           <div class="flex items-center gap-3 py-3">
@@ -638,10 +641,20 @@
             <div class="flex-1 min-w-0">
               <p class="text-sm font-medium text-gray-800 truncate">${r.videoTitle}</p>
               <p class="text-xs text-gray-400 truncate">${r.channelName || ""}</p>
-              <p class="text-xs text-gray-400 mt-0.5">${date}${dur ? ` · ${dur}` : ""}</p>
+              <p class="text-xs text-gray-400 mt-0.5">${time}${dur ? ` · ${dur}` : ""}</p>
             </div>
           </div>`;
       }).join("");
+
+      // Show collapsed toggle
+      let expanded = false;
+      toggle.textContent = `▸ Show videos (${records.length})`;
+      toggle.classList.remove("hidden");
+      toggle.onclick = () => {
+        expanded = !expanded;
+        list.classList.toggle("hidden", !expanded);
+        toggle.textContent = expanded ? `▾ Hide videos` : `▸ Show videos (${records.length})`;
+      };
     }
 
     document.getElementById("clear-history-btn").addEventListener("click", async () => {

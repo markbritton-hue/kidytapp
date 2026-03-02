@@ -70,9 +70,12 @@
 
       // Fetch videos via YouTube RSS, parsed directly (no third-party API)
       const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
+      const enc = encodeURIComponent(rssUrl);
       const proxies = [
-        `https://corsproxy.io/?${encodeURIComponent(rssUrl)}`,
-        `https://api.allorigins.win/raw?url=${encodeURIComponent(rssUrl)}`,
+        `https://corsproxy.io/?${enc}`,
+        `https://api.allorigins.win/raw?url=${enc}`,
+        `https://api.codetabs.com/v1/proxy?quest=${enc}`,
+        `https://thingproxy.freeboard.io/fetch/${rssUrl}`,
       ];
 
       let xmlText = null;

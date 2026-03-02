@@ -105,7 +105,7 @@
             <p class="font-semibold text-gray-800">PBS Kids</p>
             <p class="text-xs text-gray-400">Educational kids content</p>
           </div>
-          <button onclick="quickAdd('UCrNnk0wFBnCS1awGjq_ijGQ',this)"
+          <button onclick="quickAdd({id:'UCrNnk0wFBnCS1awGjq_ijGQ',name:'PBS Kids',thumbnail:'https://yt3.ggpht.com/ZBcGbfxSEOigEe07nPd5AsSrYRO9NLqyxBZ1rGLtFC4Fr6eUqoL5D97U_aHLN4wO-p66Q7sO0g=s176-c-k-c0x00ffffff-no-rj'},this)"
             class="flex-shrink-0 bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-colors disabled:opacity-50">
             + Add
           </button>
@@ -116,7 +116,7 @@
             <p class="font-semibold text-gray-800">Kids Crew</p>
             <p class="text-xs text-gray-400">Songs, stories &amp; fun</p>
           </div>
-          <button onclick="quickAdd('@kidcrew',this)"
+          <button onclick="quickAdd({id:'UCXqgb_iVJtmE73ycq43ZZwA',name:'Kids Crew',thumbnail:'https://yt3.ggpht.com/3qWmf3bg9o_kSmAfcpf6enIzKA2inTCtPwcVU99s7iv0bhTbPR5fIb5t_cnzH5GPdpLZkSJl=s176-c-k-c0x00ffffff-no-rj'},this)"
             class="flex-shrink-0 bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-colors disabled:opacity-50">
             + Add
           </button>
@@ -127,7 +127,7 @@
             <p class="font-semibold text-gray-800">Bluey</p>
             <p class="text-xs text-gray-400">The beloved animated series</p>
           </div>
-          <button onclick="quickAdd('UCVzLLZkDuFGAE2BGdBuBNBg',this)"
+          <button onclick="quickAdd({id:'UCVzLLZkDuFGAE2BGdBuBNBg',name:'Bluey',thumbnail:'https://yt3.ggpht.com/7Jlomy-7asRjE8WHiLbAqw-LJq5VdyRpBnXU7yxLi-lqXS_OSB5Kd7MLDv9ybsafyOdi5uzCCQ=s176-c-k-c0x00ffffff-no-rj'},this)"
             class="flex-shrink-0 bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-colors disabled:opacity-50">
             + Add
           </button>
@@ -138,7 +138,7 @@
             <p class="font-semibold text-gray-800">Nat Geo Kids</p>
             <p class="text-xs text-gray-400">Animals, science &amp; nature</p>
           </div>
-          <button onclick="quickAdd('UCXVCgDuD_QCkI7gTKU7-tpg',this)"
+          <button onclick="quickAdd({id:'UCXVCgDuD_QCkI7gTKU7-tpg',name:'Nat Geo Kids',thumbnail:'https://yt3.ggpht.com/a3N_xf3x2Z99wV_RRyAG2GUUhdCcgtmLq6kivkVsFGSb4pMjVnvrrAedJihqd3eWtir8tJNtCQ=s176-c-k-c0x00ffffff-no-rj'},this)"
             class="flex-shrink-0 bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-colors disabled:opacity-50">
             + Add
           </button>
@@ -390,11 +390,13 @@
     }
 
     // ── Quick-add a suggested channel ──────────────────────────────────────────
+    // input can be a pre-built {id,name,thumbnail} object (suggested channels)
+    // or a string URL/handle/ID (fallback to resolveChannel)
     window.quickAdd = async (input, btn) => {
       btn.disabled = true;
       btn.textContent = "Adding…";
       try {
-        const ch = await resolveChannel(input);
+        const ch = (typeof input === "object") ? input : await resolveChannel(input);
         await setDoc(doc(db, "users", currentUser.uid, "channels", ch.id), {
           ...ch, addedAt: new Date().toISOString(),
         });
@@ -410,13 +412,18 @@
 
     // ── Fetch a URL via multiple CORS proxies ──────────────────────────────────
     async function fetchViaProxy(url) {
+      const enc = encodeURIComponent(url);
       try {
-        const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`);
+        const r = await fetch(`https://corsproxy.io/?${enc}`);
         if (r.ok) return await r.text();
       } catch {}
       try {
-        const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
-        if (r.ok) { const d = await r.json(); if (d.contents) return d.contents; }
+        const r = await fetch(`https://api.allorigins.win/raw?url=${enc}`);
+        if (r.ok) return await r.text();
+      } catch {}
+      try {
+        const r = await fetch(`https://api.codetabs.com/v1/proxy?quest=${enc}`);
+        if (r.ok) return await r.text();
       } catch {}
       try {
         const r = await fetch(`https://thingproxy.freeboard.io/fetch/${url}`);

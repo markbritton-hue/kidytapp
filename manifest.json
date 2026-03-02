@@ -2,15 +2,15 @@
   "name": "Viddy",
   "short_name": "Viddy",
   "description": "Safe YouTube for kids",
-  "start_url": "/kidytapp/",
-  "scope": "/kidytapp/",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
   "icons": [
     {
-      "src": "/kidytapp/public/logo.svg",
+      "src": "public/logo.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"

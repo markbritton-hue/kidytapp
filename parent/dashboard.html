@@ -100,7 +100,7 @@
       </div>
       <div class="px-6 py-4 divide-y divide-gray-100">
         <div class="flex items-center gap-4 py-4">
-          <img id="suggest-avatar-pbs" src="" alt="PBS Kids" class="w-14 h-14 rounded-full object-cover flex-shrink-0 bg-gray-100" />
+          <img src="https://yt3.ggpht.com/ZBcGbfxSEOigEe07nPd5AsSrYRO9NLqyxBZ1rGLtFC4Fr6eUqoL5D97U_aHLN4wO-p66Q7sO0g=s176-c-k-c0x00ffffff-no-rj" alt="PBS Kids" class="w-14 h-14 rounded-full object-cover flex-shrink-0 bg-gray-100" />
           <div class="flex-1 min-w-0">
             <p class="font-semibold text-gray-800">PBS Kids</p>
             <p class="text-xs text-gray-400">Educational kids content</p>
@@ -111,7 +111,7 @@
           </button>
         </div>
         <div class="flex items-center gap-4 py-4">
-          <img id="suggest-avatar-kidscrew" src="" alt="Kids Crew" class="w-14 h-14 rounded-full object-cover flex-shrink-0 bg-gray-100" />
+          <img src="https://yt3.ggpht.com/3qWmf3bg9o_kSmAfcpf6enIzKA2inTCtPwcVU99s7iv0bhTbPR5fIb5t_cnzH5GPdpLZkSJl=s176-c-k-c0x00ffffff-no-rj" alt="Kids Crew" class="w-14 h-14 rounded-full object-cover flex-shrink-0 bg-gray-100" />
           <div class="flex-1 min-w-0">
             <p class="font-semibold text-gray-800">Kids Crew</p>
             <p class="text-xs text-gray-400">Songs, stories &amp; fun</p>
@@ -122,7 +122,7 @@
           </button>
         </div>
         <div class="flex items-center gap-4 py-4">
-          <img id="suggest-avatar-bluey" src="" alt="Bluey" class="w-14 h-14 rounded-full object-cover flex-shrink-0 bg-gray-100" />
+          <img src="https://yt3.ggpht.com/7Jlomy-7asRjE8WHiLbAqw-LJq5VdyRpBnXU7yxLi-lqXS_OSB5Kd7MLDv9ybsafyOdi5uzCCQ=s176-c-k-c0x00ffffff-no-rj" alt="Bluey" class="w-14 h-14 rounded-full object-cover flex-shrink-0 bg-gray-100" />
           <div class="flex-1 min-w-0">
             <p class="font-semibold text-gray-800">Bluey</p>
             <p class="text-xs text-gray-400">The beloved animated series</p>
@@ -133,7 +133,7 @@
           </button>
         </div>
         <div class="flex items-center gap-4 py-4">
-          <img id="suggest-avatar-natgeo" src="" alt="Nat Geo Kids" class="w-14 h-14 rounded-full object-cover flex-shrink-0 bg-gray-100" />
+          <img src="https://yt3.ggpht.com/a3N_xf3x2Z99wV_RRyAG2GUUhdCcgtmLq6kivkVsFGSb4pMjVnvrrAedJihqd3eWtir8tJNtCQ=s176-c-k-c0x00ffffff-no-rj" alt="Nat Geo Kids" class="w-14 h-14 rounded-full object-cover flex-shrink-0 bg-gray-100" />
           <div class="flex-1 min-w-0">
             <p class="font-semibold text-gray-800">Nat Geo Kids</p>
             <p class="text-xs text-gray-400">Animals, science &amp; nature</p>
@@ -291,7 +291,6 @@
       loadActivity();
       watchNowPlaying(user.uid);
       loadSchedule(user.uid);
-      loadSuggestedAvatars();
       upgradeThumbnails();
     });
 
@@ -369,23 +368,6 @@
         }
       }
       return null;
-    }
-
-    // ── Load suggested channel avatars ────────────────────────────────────────
-    function loadSuggestedAvatars() {
-      const entries = [
-        { id: 'suggest-avatar-pbs',      url: 'https://www.youtube.com/channel/UCrNnk0wFBnCS1awGjq_ijGQ' },
-        { id: 'suggest-avatar-kidscrew', url: 'https://www.youtube.com/@kidcrew' },
-        { id: 'suggest-avatar-bluey',    url: 'https://www.youtube.com/channel/UCVzLLZkDuFGAE2BGdBuBNBg' },
-        { id: 'suggest-avatar-natgeo',   url: 'https://www.youtube.com/channel/UCXVCgDuD_QCkI7gTKU7-tpg' },
-      ];
-      for (const { id, url } of entries) {
-        fetchViaProxy(url).then(html => {
-          if (!html) return;
-          const avatar = extractAvatar(html);
-          if (avatar) document.getElementById(id).src = avatar;
-        }).catch(() => {});
-      }
     }
 
     // ── Upgrade stored video thumbnails to channel profile pictures ───────────

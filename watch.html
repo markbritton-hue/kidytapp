@@ -122,8 +122,10 @@
 
     // ── Watch tracking + enforcement ─────────────────────────────────────────
     if (uid) {
-      const todayKey = `viddy-watched-${uid}-${new Date().toISOString().slice(0, 10)}`;
-      const alreadyWatchedSecs = parseInt(localStorage.getItem(todayKey) || "0", 10);
+      const todayStr     = new Date().toISOString().slice(0, 10);
+      const todayKey     = `viddy-watched-${uid}-${todayStr}`;
+      const watchTimeRef = doc(db, "users", uid, "watchTime", todayStr);
+      let alreadyWatchedSecs = parseInt(localStorage.getItem(todayKey) || "0", 10);
 
       const scheduleRef = doc(db, "users", uid, "status", "schedule");
       let currentSchedule = null;
@@ -181,12 +183,19 @@
         return true;
       }
 
-      // Wait for both the schedule check AND the YT API to be ready
-      const schedulePromise = getDoc(scheduleRef)
+      // Wait for the YT API, schedule check, AND today's cross-device watch total
+      const schedulePromise  = getDoc(scheduleRef)
         .then(snap => snap.exists() ? snap.data() : null)
         .catch(() => null);
+      const watchTimePromise = getDoc(watchTimeRef)
+        .then(snap => snap.exists() ? (snap.data().totalSeconds || 0) : 0)
+        .catch(() => 0);
 
-      Promise.all([ytReady, schedulePromise]).then(([, schedule]) => {
+      Promise.all([ytReady, schedulePromise, watchTimePromise]).then(([, schedule, firestoreSecs]) => {
+        // Sync today's total across devices — take whichever is higher
+        alreadyWatchedSecs = Math.max(alreadyWatchedSecs, firestoreSecs);
+        localStorage.setItem(todayKey, alreadyWatchedSecs);
+
         currentSchedule = schedule;
         if (enforceSchedule(currentSchedule)) return; // already over limit — don't start
 
@@ -220,9 +229,11 @@
         saveDuration = function() {
           const secs = currentPlayedSecs();
           if (secs < 2) return;
+          const totalSecs = alreadyWatchedSecs + secs;
           updateDoc(sessionRef, { durationSeconds: secs, endedAt: new Date().toISOString() }).catch(() => {});
           updateDoc(nowPlayingRef, { durationSeconds: secs }).catch(() => {});
-          localStorage.setItem(todayKey, alreadyWatchedSecs + secs);
+          setDoc(watchTimeRef, { totalSeconds: totalSecs }, { merge: true }).catch(() => {});
+          localStorage.setItem(todayKey, totalSecs);
         };
 
         function clearNowPlaying() { deleteDoc(nowPlayingRef).catch(() => {}); }

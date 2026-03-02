@@ -171,8 +171,19 @@
 
       const { activeUserId } = configSnap.data();
 
-      // Check bedtime schedule before showing anything
-      const schedSnap = await getDoc(doc(db, "users", activeUserId, "status", "schedule")).catch(() => null);
+      // Fetch schedule and today's cross-device watch total in parallel
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const todayKey = `viddy-watched-${activeUserId}-${todayStr}`;
+      const [schedSnap, watchTimeSnap] = await Promise.all([
+        getDoc(doc(db, "users", activeUserId, "status", "schedule")).catch(() => null),
+        getDoc(doc(db, "users", activeUserId, "watchTime", todayStr)).catch(() => null),
+      ]);
+      // Sync today's total across devices — take whichever is higher
+      const localSecs     = parseInt(localStorage.getItem(todayKey) || "0", 10);
+      const firestoreSecs = watchTimeSnap?.exists() ? (watchTimeSnap.data().totalSeconds || 0) : 0;
+      const watchedSecs   = Math.max(localSecs, firestoreSecs);
+      if (watchedSecs > localSecs) localStorage.setItem(todayKey, watchedSecs);
+
       if (schedSnap && schedSnap.exists()) {
         const s = schedSnap.data();
         let blocked = false;
@@ -187,8 +198,6 @@
         }
         let timeLimitHit = false;
         if (!blocked && s.timeLimitEnabled && s.timeLimitMins) {
-          const todayKey = `viddy-watched-${activeUserId}-${new Date().toISOString().slice(0, 10)}`;
-          const watchedSecs = parseInt(localStorage.getItem(todayKey) || "0", 10);
           if (watchedSecs >= s.timeLimitMins * 60) {
             blocked = true; timeLimitHit = true;
             blockMsg = `You've reached your ${s.timeLimitMins} minute daily limit. See you tomorrow!`;
@@ -229,8 +238,6 @@
       // Show time clock if a daily limit is set
       const schedData = schedSnap && schedSnap.exists() ? schedSnap.data() : null;
       if (schedData && schedData.timeLimitEnabled && schedData.timeLimitMins) {
-        const todayKey = `viddy-watched-${activeUserId}-${new Date().toISOString().slice(0, 10)}`;
-        const watchedSecs = parseInt(localStorage.getItem(todayKey) || "0", 10);
         const limitSecs = schedData.timeLimitMins * 60;
         const remainingSecs = Math.max(0, limitSecs - watchedSecs);
         const CIRC = 2 * Math.PI * 42;

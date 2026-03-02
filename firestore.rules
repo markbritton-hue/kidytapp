@@ -26,6 +26,12 @@ service cloud.firestore {
       allow write: if request.auth != null && request.auth.uid == userId;
     }
 
+    // Daily watch totals — kids write (unauthenticated), anyone can read
+    match /users/{userId}/watchTime/{date} {
+      allow read: if true;
+      allow write: if true;
+    }
+
     match /config/{document} {
       allow read: if true;
       allow write: if request.auth != null;

@@ -95,13 +95,36 @@
   <div class="pointer-events-none fixed top-32 right-16 w-36 h-36 bg-yellow-300/20 rounded-full blur-3xl"></div>
   <div class="pointer-events-none fixed bottom-20 left-1/4 w-28 h-28 bg-pink-300/20 rounded-full blur-2xl"></div>
 
-  <header class="pt-10 pb-6 px-6 text-center">
-    <div class="flex items-center justify-center gap-3 mb-2">
-      <img src="public/logo.svg" alt="Viddy" class="w-14 h-14 drop-shadow-lg" />
-      <h1 class="text-5xl font-extrabold text-white drop-shadow-lg tracking-wide">Viddy</h1>
+  <header class="pt-6 pb-4 px-6 text-center">
+    <div class="flex items-center justify-center gap-2 mb-1">
+      <img src="public/logo.svg" alt="Viddy" class="w-8 h-8 drop-shadow-lg" />
+      <h1 class="text-2xl font-extrabold text-white drop-shadow-lg tracking-wide">Viddy</h1>
     </div>
-    <p id="subtitle" class="text-blue-100 text-lg font-medium">Loading…</p>
-    <p id="time-status" class="hidden mt-2 text-white/90 text-sm font-semibold bg-white/20 backdrop-blur-sm inline-block px-4 py-1.5 rounded-full"></p>
+    <p id="subtitle" class="text-blue-100 text-sm font-medium">Loading…</p>
+    <!-- Time clock — shown only when a daily limit is set -->
+    <div id="time-clock" class="hidden mt-4 flex justify-center">
+      <svg width="120" height="120" viewBox="0 0 120 120">
+        <!-- Outer bezel -->
+        <circle cx="60" cy="60" r="56" fill="rgba(0,0,0,0.3)" stroke="rgba(255,255,255,0.25)" stroke-width="2"/>
+        <!-- Background track -->
+        <circle cx="60" cy="60" r="42" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="14"/>
+        <!-- Progress arc (starts at 12 o'clock, grows clockwise) -->
+        <circle id="time-arc" cx="60" cy="60" r="42" fill="none" stroke="#4ade80" stroke-width="14"
+          stroke-linecap="round" stroke-dasharray="0 264" transform="rotate(-90 60 60)"/>
+        <!-- Inner dark face -->
+        <circle cx="60" cy="60" r="30" fill="rgba(0,0,0,0.35)"/>
+        <!-- Cardinal tick marks -->
+        <line x1="60" y1="6"   x2="60" y2="14"  stroke="rgba(255,255,255,0.55)" stroke-width="2" stroke-linecap="round"/>
+        <line x1="114" y1="60" x2="106" y2="60" stroke="rgba(255,255,255,0.55)" stroke-width="2" stroke-linecap="round"/>
+        <line x1="60" y1="114" x2="60" y2="106" stroke="rgba(255,255,255,0.55)" stroke-width="2" stroke-linecap="round"/>
+        <line x1="6"  y1="60"  x2="14"  y2="60" stroke="rgba(255,255,255,0.55)" stroke-width="2" stroke-linecap="round"/>
+        <!-- Time remaining text -->
+        <text id="time-num" x="60" y="57" text-anchor="middle" dominant-baseline="middle"
+          fill="white" font-size="18" font-weight="bold" font-family="system-ui,sans-serif">--</text>
+        <text id="time-label" x="60" y="73" text-anchor="middle" dominant-baseline="middle"
+          fill="rgba(255,255,255,0.75)" font-size="9" font-family="system-ui,sans-serif">min left</text>
+      </svg>
+    </div>
   </header>
 
   <section class="px-4 sm:px-8 pb-16 max-w-6xl mx-auto">
@@ -201,31 +224,40 @@
         return;
       }
 
-      subtitle.textContent = "Pick a channel to watch!";
+      subtitle.textContent = "";
 
-      // Show time remaining / used if a daily limit is set
+      // Show time clock if a daily limit is set
       const schedData = schedSnap && schedSnap.exists() ? schedSnap.data() : null;
       if (schedData && schedData.timeLimitEnabled && schedData.timeLimitMins) {
         const todayKey = `viddy-watched-${activeUserId}-${new Date().toISOString().slice(0, 10)}`;
         const watchedSecs = parseInt(localStorage.getItem(todayKey) || "0", 10);
         const limitSecs = schedData.timeLimitMins * 60;
         const remainingSecs = Math.max(0, limitSecs - watchedSecs);
-        const remainingMins = Math.ceil(remainingSecs / 60);
-        const timeEl = document.getElementById("time-status");
-        if (remainingSecs === 0) {
-          timeEl.textContent = "⏰ No time left today";
-          timeEl.classList.remove("hidden");
-        } else if (remainingMins <= 5) {
-          timeEl.textContent = `⏱ ${remainingMins} min left today`;
-          timeEl.classList.remove("hidden");
+        const CIRC = 2 * Math.PI * 42;
+        const pct = limitSecs > 0 ? remainingSecs / limitSecs : 0;
+        const arc = document.getElementById("time-arc");
+        arc.setAttribute("stroke-dasharray", `${pct * CIRC} ${CIRC}`);
+        arc.setAttribute("stroke", pct > 0.5 ? "#4ade80" : pct > 0.25 ? "#facc15" : "#f87171");
+        const numEl   = document.getElementById("time-num");
+        const labelEl = document.getElementById("time-label");
+        if (remainingSecs <= 0) {
+          arc.setAttribute("stroke-dasharray", `0 ${CIRC}`);
+          arc.setAttribute("stroke", "#f87171");
+          numEl.textContent   = "0";
+          labelEl.textContent = "time's up!";
         } else {
-          const hrs = Math.floor(remainingMins / 60);
-          const mins = remainingMins % 60;
-          timeEl.textContent = hrs > 0
-            ? `⏱ ${hrs}h ${mins > 0 ? mins + "m" : ""} left today`.trim()
-            : `⏱ ${remainingMins} min left today`;
-          timeEl.classList.remove("hidden");
+          const remainingMins = Math.ceil(remainingSecs / 60);
+          if (remainingMins >= 60) {
+            numEl.setAttribute("font-size", "13");
+            numEl.textContent   = `${(remainingMins / 60).toFixed(1)}h`;
+            labelEl.textContent = "left today";
+          } else {
+            numEl.setAttribute("font-size", "18");
+            numEl.textContent   = remainingMins;
+            labelEl.textContent = "min left";
+          }
         }
+        document.getElementById("time-clock").classList.remove("hidden");
       }
       grid.innerHTML = channels.map(ch => `
         <a href="channel.html?id=${ch.id}&uid=${activeUserId}" class="channel-card block">

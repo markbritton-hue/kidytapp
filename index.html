@@ -101,6 +101,7 @@
       <h1 class="text-5xl font-extrabold text-white drop-shadow-lg tracking-wide">Viddy</h1>
     </div>
     <p id="subtitle" class="text-blue-100 text-lg font-medium">Loading…</p>
+    <p id="time-status" class="hidden mt-2 text-white/90 text-sm font-semibold bg-white/20 backdrop-blur-sm inline-block px-4 py-1.5 rounded-full"></p>
   </header>
 
   <section class="px-4 sm:px-8 pb-16 max-w-6xl mx-auto">
@@ -201,6 +202,31 @@
       }
 
       subtitle.textContent = "Pick a channel to watch!";
+
+      // Show time remaining / used if a daily limit is set
+      const schedData = schedSnap && schedSnap.exists() ? schedSnap.data() : null;
+      if (schedData && schedData.timeLimitEnabled && schedData.timeLimitMins) {
+        const todayKey = `viddy-watched-${activeUserId}-${new Date().toISOString().slice(0, 10)}`;
+        const watchedSecs = parseInt(localStorage.getItem(todayKey) || "0", 10);
+        const limitSecs = schedData.timeLimitMins * 60;
+        const remainingSecs = Math.max(0, limitSecs - watchedSecs);
+        const remainingMins = Math.ceil(remainingSecs / 60);
+        const timeEl = document.getElementById("time-status");
+        if (remainingSecs === 0) {
+          timeEl.textContent = "⏰ No time left today";
+          timeEl.classList.remove("hidden");
+        } else if (remainingMins <= 5) {
+          timeEl.textContent = `⏱ ${remainingMins} min left today`;
+          timeEl.classList.remove("hidden");
+        } else {
+          const hrs = Math.floor(remainingMins / 60);
+          const mins = remainingMins % 60;
+          timeEl.textContent = hrs > 0
+            ? `⏱ ${hrs}h ${mins > 0 ? mins + "m" : ""} left today`.trim()
+            : `⏱ ${remainingMins} min left today`;
+          timeEl.classList.remove("hidden");
+        }
+      }
       grid.innerHTML = channels.map(ch => `
         <a href="channel.html?id=${ch.id}&uid=${activeUserId}" class="channel-card block">
           <div class="bg-gradient-to-br ${pickColor(ch.id)} rounded-3xl overflow-hidden shadow-lg">

@@ -54,11 +54,7 @@
   <div id="video-outer" class="flex-1 flex items-center justify-center p-2 sm:p-6">
     <div id="video-wrap" class="w-full max-w-5xl">
       <div id="video-aspect" class="relative w-full" style="padding-bottom: 56.25%;">
-        <iframe
-          id="player"
-          class="absolute inset-0 w-full h-full rounded-xl shadow-2xl"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
-        </iframe>
+        <div id="player" class="absolute inset-0 w-full h-full rounded-xl shadow-2xl"></div>
         <!-- Blocks clicks on the YouTube title/logo at the top of the embed player -->
         <div class="absolute top-0 left-0 right-0 z-10" style="height: 60px;"></div>
         <!-- Blocks the "Watch on YouTube" logo in the bottom-right of the player -->
@@ -94,91 +90,126 @@
     import { db } from "./js/firebase-config.js";
     import { doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    const params = new URLSearchParams(location.search);
+    const params     = new URLSearchParams(location.search);
     const videoId    = params.get("v");
     const from       = params.get("from");
     const uid        = params.get("uid");
     const videoTitle = params.get("title") || videoId;
     const channelName = params.get("ch") || "";
 
-    // Validate video ID (11 chars alphanumeric + - _)
-    if (!videoId || !/^[\w-]{11}$/.test(videoId)) {
-      location.href = "index.html";
-    }
-
-    // Set back button
+    if (!videoId || !/^[\w-]{11}$/.test(videoId)) { location.href = "index.html"; }
     if (from) {
       document.getElementById("back-btn").href = `channel.html?id=${from}${uid ? "&uid=" + uid : ""}`;
     }
 
-    // ── Watch tracking + bedtime / time-limit enforcement ────────────────────
+    // ── Load YouTube IFrame API ───────────────────────────────────────────────
+    // Resolves when YT.Player constructor is available
+    const ytReady = new Promise(resolve => { window.onYouTubeIframeAPIReady = resolve; });
+    const ytScript = document.createElement("script");
+    ytScript.src = "https://www.youtube.com/iframe_api";
+    document.head.appendChild(ytScript);
+
+    function createPlayer(onStateChange) {
+      return new YT.Player("player", {
+        videoId,
+        host: "https://www.youtube-nocookie.com",
+        width: "100%",
+        height: "100%",
+        playerVars: { rel: 0, modestbranding: 1, playsinline: 1, autoplay: 1 },
+        events: { onStateChange },
+      });
+    }
+
+    // ── Watch tracking + enforcement ─────────────────────────────────────────
     if (uid) {
-      // Today's accumulated watch time (resets each day via date in key)
       const todayKey = `viddy-watched-${uid}-${new Date().toISOString().slice(0, 10)}`;
       const alreadyWatchedSecs = parseInt(localStorage.getItem(todayKey) || "0", 10);
-      const startTime = Date.now();
 
       const scheduleRef = doc(db, "users", uid, "status", "schedule");
       let currentSchedule = null;
-      let overlayShown = false;
+      let overlayShown    = false;
+      let ytPlayer        = null;
 
-      function isBedtime(schedule) {
-        if (!schedule) return false;
-        if (schedule.forceStopped) return true;
-        if (!schedule.enabled || !schedule.bedtime) return false;
+      // Accurate play-time tracking — only counts seconds the video is actually playing
+      let playedSecs     = 0;
+      let playSegStart   = null;
+
+      function currentPlayedSecs() {
+        return playedSecs + (playSegStart ? Math.floor((Date.now() - playSegStart) / 1000) : 0);
+      }
+
+      function isBedtime(s) {
+        if (!s) return false;
+        if (s.forceStopped) return true;
+        if (!s.enabled || !s.bedtime) return false;
         const now = new Date();
         const nowMins = now.getHours() * 60 + now.getMinutes();
-        const [h, m] = schedule.bedtime.split(":").map(Number);
+        const [h, m] = s.bedtime.split(":").map(Number);
         return nowMins >= h * 60 + m;
       }
 
-      function isOverTimeLimit(schedule) {
-        if (!schedule?.timeLimitEnabled || !schedule?.timeLimitMins) return false;
-        const currentSecs = Math.floor((Date.now() - startTime) / 1000);
-        return (alreadyWatchedSecs + currentSecs) >= schedule.timeLimitMins * 60;
+      function isOverTimeLimit(s) {
+        if (!s?.timeLimitEnabled || !s?.timeLimitMins) return false;
+        return (alreadyWatchedSecs + currentPlayedSecs()) >= s.timeLimitMins * 60;
       }
 
-      function enforceSchedule(schedule) {
-        const blocked = isBedtime(schedule) || isOverTimeLimit(schedule);
-        if (!blocked || overlayShown) return false;
+      // saveDuration is wired up once the player starts; stub until then
+      let saveDuration = () => {};
+
+      function enforceSchedule(s) {
+        if (!isBedtime(s) && !isOverTimeLimit(s)) return false;
+        if (overlayShown) return true;
         overlayShown = true;
-        if (typeof saveDuration === "function") saveDuration();
-        document.getElementById("player").src = "";
+        saveDuration();
+        if (ytPlayer?.stopVideo) ytPlayer.stopVideo();
         const emoji = document.getElementById("overlay-emoji");
         const title = document.getElementById("overlay-title");
         const msg   = document.getElementById("bedtime-msg");
-        if (schedule.forceStopped) {
-          emoji.textContent = "🛑";
-          title.textContent = "Watching stopped!";
-          msg.textContent   = "A parent has stopped watching for now.";
-        } else if (isOverTimeLimit(schedule)) {
-          emoji.textContent = "⏰";
-          title.textContent = "Screen time is up for today!";
-          msg.textContent   = `You've reached your ${schedule.timeLimitMins} minute daily limit. See you tomorrow!`;
+        if (s.forceStopped) {
+          emoji.textContent = "🛑"; title.textContent = "Watching stopped!";
+          msg.textContent = "A parent has stopped watching for now.";
+        } else if (isOverTimeLimit(s)) {
+          emoji.textContent = "⏰"; title.textContent = "Screen time is up for today!";
+          msg.textContent = `You've reached your ${s.timeLimitMins} minute daily limit. See you tomorrow!`;
         } else {
-          emoji.textContent = "🌙";
-          title.textContent = "Time to stop watching!";
-          msg.textContent   = "It's bedtime. See you tomorrow!";
+          emoji.textContent = "🌙"; title.textContent = "Time to stop watching!";
+          msg.textContent = "It's bedtime. See you tomorrow!";
         }
         document.getElementById("bedtime-overlay").classList.remove("hidden");
-        const backBtn = document.getElementById("bedtime-back");
-        if (from) backBtn.href = `channel.html?id=${from}${uid ? "&uid=" + uid : ""}`;
+        if (from) document.getElementById("bedtime-back").href =
+          `channel.html?id=${from}&uid=${uid}`;
         return true;
       }
 
-      // Check schedule FIRST — only start video if they're allowed to watch
-      getDoc(scheduleRef).then(snap => {
-        currentSchedule = snap.exists() ? snap.data() : null;
-        if (enforceSchedule(currentSchedule)) return; // blocked — don't start video
+      // Wait for both the schedule check AND the YT API to be ready
+      const schedulePromise = getDoc(scheduleRef)
+        .then(snap => snap.exists() ? snap.data() : null)
+        .catch(() => null);
 
-        // Allowed — start the video and tracking
-        document.getElementById("player").src =
-          `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1&autoplay=1`;
+      Promise.all([ytReady, schedulePromise]).then(([, schedule]) => {
+        currentSchedule = schedule;
+        if (enforceSchedule(currentSchedule)) return; // already over limit — don't start
 
-        const sessionId = Date.now().toString();
-        const sessionRef = doc(db, "users", uid, "watchHistory", sessionId);
+        // ── Start player ────────────────────────────────────────────────────
+        ytPlayer = createPlayer(e => {
+          if (e.data === YT.PlayerState.PLAYING) {
+            // Video started/resumed — begin timing this segment
+            if (!playSegStart) playSegStart = Date.now();
+          } else {
+            // Paused, ended, buffering — close the current segment
+            if (playSegStart) {
+              playedSecs += Math.floor((Date.now() - playSegStart) / 1000);
+              playSegStart = null;
+            }
+          }
+          enforceSchedule(currentSchedule);
+        });
+
+        // ── Firestore tracking ───────────────────────────────────────────────
+        const sessionId     = Date.now().toString();
+        const sessionRef    = doc(db, "users", uid, "watchHistory", sessionId);
         const nowPlayingRef = doc(db, "users", uid, "status", "nowPlaying");
-        const videoData = {
+        const videoData     = {
           videoId, videoTitle, channelId: from || "", channelName,
           thumbnail: `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
           startedAt: new Date().toISOString(), durationSeconds: 0,
@@ -186,38 +217,39 @@
         setDoc(sessionRef, videoData).catch(err => console.error("[Viddy] watchHistory write failed:", err));
         setDoc(nowPlayingRef, videoData).catch(err => console.error("[Viddy] nowPlaying write failed:", err));
 
-        function saveDuration() {
-          const secs = Math.floor((Date.now() - startTime) / 1000);
+        saveDuration = function() {
+          const secs = currentPlayedSecs();
           if (secs < 2) return;
           updateDoc(sessionRef, { durationSeconds: secs, endedAt: new Date().toISOString() }).catch(() => {});
           updateDoc(nowPlayingRef, { durationSeconds: secs }).catch(() => {});
           localStorage.setItem(todayKey, alreadyWatchedSecs + secs);
-        }
+        };
+
         function clearNowPlaying() { deleteDoc(nowPlayingRef).catch(() => {}); }
 
         setInterval(saveDuration, 30000);
-        document.addEventListener("visibilitychange", () => { if (document.hidden) { saveDuration(); clearNowPlaying(); } });
+        document.addEventListener("visibilitychange", () => {
+          if (document.hidden) { saveDuration(); clearNowPlaying(); }
+        });
         window.addEventListener("pagehide", () => { saveDuration(); clearNowPlaying(); });
 
-        // Real-time listener — reacts instantly to Stop Now / schedule changes
+        // Real-time schedule listener (Stop Now / Resume)
         onSnapshot(scheduleRef, snap => {
           currentSchedule = snap.exists() ? snap.data() : null;
           enforceSchedule(currentSchedule);
         });
 
-        // Time-based check every 5 seconds for time limit
+        // Check time limit every 5 seconds
         setInterval(() => enforceSchedule(currentSchedule), 5000);
 
       }).catch(() => {
-        // On Firestore error, allow playing (fail open)
-        document.getElementById("player").src =
-          `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1&autoplay=1`;
+        // Firestore error — fail open, start player without tracking
+        ytReady.then(() => createPlayer(() => {}));
       });
 
     } else {
-      // No uid — just play
-      document.getElementById("player").src =
-        `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1&autoplay=1`;
+      // No uid — just play, no tracking needed
+      ytReady.then(() => createPlayer(() => {}));
     }
   </script>
 </body>

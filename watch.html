@@ -92,7 +92,7 @@
 
   <script type="module">
     import { db } from "./js/firebase-config.js";
-    import { doc, setDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const params = new URLSearchParams(location.search);
     const videoId    = params.get("v");
@@ -165,10 +165,16 @@
       });
       window.addEventListener("pagehide", () => { saveDuration(); clearNowPlaying(); });
 
-      // ── Bedtime enforcement ──────────────────────────────────────────────────
+      // ── Bedtime / time-limit enforcement ─────────────────────────────────────
       const scheduleRef = doc(db, "users", uid, "status", "schedule");
       let currentSchedule = null;
       let overlayShown = false;
+
+      // Immediate check on load — block before the video plays if already over limit
+      getDoc(scheduleRef).then(snap => {
+        currentSchedule = snap.exists() ? snap.data() : null;
+        enforceSchedule(currentSchedule);
+      }).catch(() => {});
 
       function isBedtime(schedule) {
         if (!schedule) return false;
@@ -219,8 +225,8 @@
         enforceSchedule(currentSchedule);
       });
 
-      // Time-based check every 30 seconds
-      setInterval(() => enforceSchedule(currentSchedule), 30000);
+      // Time-based check every 5 seconds
+      setInterval(() => enforceSchedule(currentSchedule), 5000);
     }
   </script>
 </body>

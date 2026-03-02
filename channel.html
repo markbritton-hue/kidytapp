@@ -70,20 +70,33 @@
 
       // Fetch videos via YouTube RSS, parsed directly (no third-party API)
       const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
-      const enc = encodeURIComponent(rssUrl);
-      const proxies = [
-        `https://corsproxy.io/?${enc}`,
-        `https://api.allorigins.win/raw?url=${enc}`,
-        `https://api.codetabs.com/v1/proxy?quest=${enc}`,
-        `https://thingproxy.freeboard.io/fetch/${rssUrl}`,
-      ];
+      const cacheKey = `viddy-rss-${channelId}`;
+      const cacheTTL = 10 * 60 * 1000; // 10 minutes
 
+      // Show cached content instantly if available
       let xmlText = null;
-      for (const proxy of proxies) {
-        try {
-          const res = await fetch(proxy);
-          if (res.ok) { xmlText = await res.text(); break; }
-        } catch {}
+      try {
+        const cached = JSON.parse(localStorage.getItem(cacheKey));
+        if (cached && Date.now() - cached.ts < cacheTTL) xmlText = cached.xml;
+      } catch {}
+
+      // Race all proxies simultaneously — fastest wins
+      if (!xmlText) {
+        const enc = encodeURIComponent(rssUrl);
+        const tryProxy = url => fetch(url, { signal: AbortSignal.timeout(8000) })
+          .then(r => { if (!r.ok) throw new Error(r.status); return r.text(); });
+
+        xmlText = await Promise.any([
+          tryProxy(`https://corsproxy.io/?${enc}`),
+          tryProxy(`https://api.allorigins.win/raw?url=${enc}`),
+          tryProxy(`https://api.codetabs.com/v1/proxy?quest=${enc}`),
+          tryProxy(`https://thingproxy.freeboard.io/fetch/${rssUrl}`),
+        ]).catch(() => null);
+
+        // Cache the result
+        if (xmlText) {
+          try { localStorage.setItem(cacheKey, JSON.stringify({ xml: xmlText, ts: Date.now() })); } catch {}
+        }
       }
 
       if (!xmlText) {

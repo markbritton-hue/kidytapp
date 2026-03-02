@@ -132,6 +132,17 @@
             + Add
           </button>
         </div>
+        <div class="flex items-center gap-4 py-4">
+          <img id="suggest-avatar-natgeo" src="" alt="Nat Geo Kids" class="w-14 h-14 rounded-full object-cover flex-shrink-0 bg-gray-100" />
+          <div class="flex-1 min-w-0">
+            <p class="font-semibold text-gray-800">Nat Geo Kids</p>
+            <p class="text-xs text-gray-400">Animals, science &amp; nature</p>
+          </div>
+          <button onclick="quickAdd('UCXVCgDuD_QCkI7gTKU7-tpg',this)"
+            class="flex-shrink-0 bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-colors disabled:opacity-50">
+            + Add
+          </button>
+        </div>
       </div>
     </section>
 
@@ -366,6 +377,7 @@
         { id: 'suggest-avatar-pbs',      url: 'https://www.youtube.com/channel/UCrNnk0wFBnCS1awGjq_ijGQ' },
         { id: 'suggest-avatar-kidscrew', url: 'https://www.youtube.com/@kidcrew' },
         { id: 'suggest-avatar-bluey',    url: 'https://www.youtube.com/channel/UCVzLLZkDuFGAE2BGdBuBNBg' },
+        { id: 'suggest-avatar-natgeo',   url: 'https://www.youtube.com/channel/UCXVCgDuD_QCkI7gTKU7-tpg' },
       ];
       for (const { id, url } of entries) {
         fetchViaProxy(url).then(html => {

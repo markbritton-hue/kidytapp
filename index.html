@@ -24,6 +24,9 @@
     <a href="how-it-works.html" class="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white text-sm font-semibold px-5 py-3 rounded-full border border-white/30 transition-all">
       ❓ How it works
     </a>
+    <button id="donate-btn" class="bg-pink-500/80 hover:bg-pink-500 backdrop-blur-sm text-white text-sm font-semibold px-5 py-3 rounded-full border border-white/30 transition-all flex items-center gap-1">
+      ❤️ Support Viddy
+    </button>
     <button id="parent-zone-btn" class="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white text-sm font-semibold px-5 py-3 rounded-full border border-white/30 transition-all flex items-center gap-1">
       🔒 Parent Zone
     </button>
@@ -262,6 +265,11 @@
 
     document.getElementById("parent-zone-btn").addEventListener("click", () => openParentModal(false));
 
+    document.getElementById("donate-btn").addEventListener("click", () => {
+      sessionStorage.setItem("viddy-goto-donate", "1");
+      openParentModal(false);
+    });
+
     document.getElementById("modal-close").addEventListener("click", () => {
       modal.classList.add("hidden");
     });
@@ -301,7 +309,7 @@
           username,
           parentSetup: true,
         }, { merge: true });
-        location.href = "parent/dashboard.html";
+        location.href = "parent/dashboard.html" + (sessionStorage.getItem("viddy-goto-donate") ? "#donate" : "");
       } catch (err) {
         const msg = isCreateMode
           ? (err.code === "auth/email-already-in-use" ? "That username is already taken." : "Could not create account. Try a different username.")

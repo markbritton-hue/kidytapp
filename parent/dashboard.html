@@ -230,6 +230,25 @@
       <div id="activity-list" class="px-6 py-4 divide-y divide-gray-100"></div>
     </section>
 
+    <!-- Support Viddy -->
+    <section id="donate" class="bg-white rounded-2xl shadow-sm border border-pink-200 overflow-hidden">
+      <div class="px-6 py-5 border-b border-pink-100">
+        <h2 class="text-lg font-bold text-gray-800">❤️ Support Viddy</h2>
+        <p class="text-sm text-gray-500 mt-0.5">Donations help keep Viddy running and improving</p>
+      </div>
+      <div class="px-6 py-6 text-center">
+        <p class="text-gray-600 text-sm mb-5">Viddy is a passion project built for parents who want a safer YouTube experience for their kids. If it's been useful to your family, a small donation means a lot!</p>
+        <a href="https://venmo.com/u/Mark-Britton-18" target="_blank" rel="noopener noreferrer"
+          class="inline-flex items-center gap-3 bg-blue-500 hover:bg-blue-600 text-white font-bold px-8 py-4 rounded-2xl text-base transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 111 111" fill="white">
+            <path d="M90.5 8.5c3.9 6.4 5.7 13 5.7 21.4 0 26.7-22.8 61.4-41.3 85.8H15.7L1 10.9l38-3.6 7.9 63.7C55.1 55.4 64 30.1 64 16.1c0-8.1-1.4-13.6-3.6-18.1L90.5 8.5z"/>
+          </svg>
+          Donate via Venmo
+        </a>
+        <p class="text-xs text-gray-400 mt-4">@Mark-Britton-18 on Venmo</p>
+      </div>
+    </section>
+
   </div>
 
   <script type="module">
@@ -696,6 +715,12 @@
 
     document.getElementById("resume-btn").addEventListener("click", resumeNow);
     document.getElementById("banner-resume-btn").addEventListener("click", resumeNow);
+
+    // Scroll to donation section if arriving via the home page donate button
+    if (sessionStorage.getItem("viddy-goto-donate") || location.hash === "#donate") {
+      sessionStorage.removeItem("viddy-goto-donate");
+      setTimeout(() => document.getElementById("donate").scrollIntoView({ behavior: "smooth", block: "start" }), 600);
+    }
   </script>
 </body>
 </html>

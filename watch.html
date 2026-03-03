@@ -210,6 +210,10 @@
               playedSecs += Math.floor((Date.now() - playSegStart) / 1000);
               playSegStart = null;
             }
+            // Save to Firestore immediately on pause/end so other devices stay in sync
+            if (e.data === YT.PlayerState.PAUSED || e.data === YT.PlayerState.ENDED) {
+              saveDuration();
+            }
           }
           enforceSchedule(currentSchedule);
         });
@@ -238,7 +242,7 @@
 
         function clearNowPlaying() { deleteDoc(nowPlayingRef).catch(() => {}); }
 
-        setInterval(saveDuration, 30000);
+        setInterval(saveDuration, 15000);
         document.addEventListener("visibilitychange", () => {
           if (document.hidden) { saveDuration(); clearNowPlaying(); }
         });

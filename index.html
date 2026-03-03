@@ -27,9 +27,14 @@
     <button id="donate-btn" class="bg-pink-500/80 hover:bg-pink-500 backdrop-blur-sm text-white text-sm font-semibold px-5 py-3 rounded-full border border-white/30 transition-all flex items-center gap-1">
       ❤️ Support Viddy
     </button>
-    <button id="parent-zone-btn" class="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white text-sm font-semibold px-5 py-3 rounded-full border border-white/30 transition-all flex items-center gap-1">
-      🔒 Parent Zone
-    </button>
+    <div class="relative" id="pz-wrap">
+      <button id="parent-zone-btn" class="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white text-sm font-semibold px-5 py-3 rounded-full border border-white/30 transition-all flex items-center gap-1">
+        🔒 Parent Zone
+      </button>
+      <div id="parent-tooltip" class="absolute right-0 top-full mt-2 bg-gray-900/95 backdrop-blur-sm text-white text-xs font-medium px-3 py-2 rounded-xl shadow-xl whitespace-nowrap pointer-events-none z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+        Signed in as <span id="parent-username-tip" class="font-bold text-blue-300"></span>
+      </div>
+    </div>
   </div>
 
   <!-- First-time setup modal -->
@@ -346,6 +351,13 @@
 
     document.getElementById("parent-zone-btn").addEventListener("click", () => openParentModal(false));
 
+    // Show username tooltip on hover if a parent has logged in on this device
+    const savedUsername = localStorage.getItem("viddy-parent-username");
+    if (savedUsername) {
+      document.getElementById("parent-username-tip").textContent = savedUsername;
+      document.getElementById("pz-wrap").classList.add("group");
+    }
+
     document.getElementById("donate-btn").addEventListener("click", () => {
       sessionStorage.setItem("viddy-goto-donate", "1");
       openParentModal(false);
@@ -391,6 +403,7 @@
           parentSetup: true,
         }, { merge: true });
         localStorage.setItem("viddy-parent-uid", cred.user.uid);
+        localStorage.setItem("viddy-parent-username", username);
         location.href = "parent/dashboard.html" + (sessionStorage.getItem("viddy-goto-donate") ? "#donate" : "");
       } catch (err) {
         const msg = isCreateMode

@@ -121,11 +121,16 @@
     }
 
     // ── Watch tracking + enforcement ─────────────────────────────────────────
-    // Resolve the authoritative parent UID from Firestore config (same value on
-    // every device), falling back to the URL param if Firestore is unreachable.
-    getDoc(doc(db, "config", "settings"))
-      .then(snap => (snap.exists() ? snap.data().activeUserId : null) || urlUid)
-      .catch(() => urlUid)
+    // Resolve the parent UID: prefer what was saved to localStorage at login
+    // time on this device, then fall back to config/settings (shared Firestore
+    // doc that any device can overwrite), then the URL param as a last resort.
+    const localParentUid = localStorage.getItem("viddy-parent-uid");
+    (localParentUid
+      ? Promise.resolve(localParentUid)
+      : getDoc(doc(db, "config", "settings"))
+          .then(snap => (snap.exists() ? snap.data().activeUserId : null) || urlUid)
+          .catch(() => urlUid)
+    )
       .then(uid => {
         if (!uid) { ytReady.then(() => createPlayer(() => {})); return; }
 

@@ -167,6 +167,7 @@
           parentSetup: true,
         });
 
+        localStorage.setItem("viddy-parent-uid", cred.user.uid);
         location.href = "dashboard.html";
       } catch (err) {
         if (err.code === "auth/email-already-in-use") {
@@ -201,6 +202,7 @@
           username,
           parentSetup: true,
         }, { merge: true });
+        localStorage.setItem("viddy-parent-uid", cred.user.uid);
         location.href = "dashboard.html";
       } catch {
         errEl.textContent = "Incorrect username or password.";

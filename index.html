@@ -157,9 +157,17 @@
       const subtitle = document.getElementById("subtitle");
       const grid     = document.getElementById("grid");
 
-      // Get the active user ID from config
-      const configSnap = await getDoc(doc(db, "config", "settings"));
-      if (!configSnap.exists() || !configSnap.data().activeUserId) {
+      // Use the parent UID saved locally at login time on this device.
+      // This is the authoritative source — config/settings is shared across all
+      // devices and can be overwritten by any login, so we only fall back to it
+      // when this device has never had a parent log in.
+      let activeUserId = localStorage.getItem("viddy-parent-uid");
+      if (!activeUserId) {
+        const configSnap = await getDoc(doc(db, "config", "settings")).catch(() => null);
+        activeUserId = configSnap?.exists() ? configSnap.data().activeUserId : null;
+        if (activeUserId) localStorage.setItem("viddy-parent-uid", activeUserId);
+      }
+      if (!activeUserId) {
         subtitle.textContent = "No channels yet — ask a parent to set up Viddy!";
         grid.innerHTML = `
           <div class="col-span-full flex flex-col items-center py-24 gap-6">
@@ -168,8 +176,6 @@
           </div>`;
         return;
       }
-
-      const { activeUserId } = configSnap.data();
 
       // Fetch schedule and today's watch total keyed by the parent's login ID
       const todayStr = new Date().toISOString().slice(0, 10);
@@ -384,6 +390,7 @@
           username,
           parentSetup: true,
         }, { merge: true });
+        localStorage.setItem("viddy-parent-uid", cred.user.uid);
         location.href = "parent/dashboard.html" + (sessionStorage.getItem("viddy-goto-donate") ? "#donate" : "");
       } catch (err) {
         const msg = isCreateMode

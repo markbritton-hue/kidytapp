@@ -685,11 +685,18 @@
     }
 
     document.getElementById("clear-history-btn").addEventListener("click", async () => {
-      if (!confirm("Clear all watch history?")) return;
-      const snap = await getDocs(collection(db, "users", currentUser.uid, "watchHistory"));
+      if (!confirm("Clear all watch history and reset time totals?")) return;
+      const [historySnap, watchTimeSnap] = await Promise.all([
+        getDocs(collection(db, "users", currentUser.uid, "watchHistory")),
+        getDocs(collection(db, "users", currentUser.uid, "watchTime")),
+      ]);
       const batch = writeBatch(db);
-      snap.docs.forEach(d => batch.delete(d.ref));
+      historySnap.docs.forEach(d => batch.delete(d.ref));
+      watchTimeSnap.docs.forEach(d => batch.delete(d.ref));
       await batch.commit();
+      // Clear localStorage entries for this user on this device
+      const prefix = `viddy-watched-${currentUser.uid}-`;
+      Object.keys(localStorage).filter(k => k.startsWith(prefix)).forEach(k => localStorage.removeItem(k));
       loadActivity();
     });
 

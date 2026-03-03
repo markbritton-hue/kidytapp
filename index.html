@@ -171,18 +171,15 @@
 
       const { activeUserId } = configSnap.data();
 
-      // Fetch schedule and today's cross-device watch total in parallel
+      // Fetch schedule and today's watch total keyed by the parent's login ID
       const todayStr = new Date().toISOString().slice(0, 10);
-      const todayKey = `viddy-watched-${activeUserId}-${todayStr}`;
       const [schedSnap, watchTimeSnap] = await Promise.all([
         getDoc(doc(db, "users", activeUserId, "status", "schedule")).catch(() => null),
         getDoc(doc(db, "users", activeUserId, "watchTime", todayStr)).catch(() => null),
       ]);
-      // Sync today's total across devices — take whichever is higher
-      const localSecs     = parseInt(localStorage.getItem(todayKey) || "0", 10);
-      const firestoreSecs = watchTimeSnap?.exists() ? (watchTimeSnap.data().totalSeconds || 0) : 0;
-      const watchedSecs   = Math.max(localSecs, firestoreSecs);
-      if (watchedSecs > localSecs) localStorage.setItem(todayKey, watchedSecs);
+      // Use Firestore as the single source of truth — it's keyed by parent ID
+      // and is the same on every device. Falls back to 0 if Firestore is unreachable.
+      const watchedSecs = watchTimeSnap?.exists() ? (watchTimeSnap.data().totalSeconds || 0) : 0;
 
       if (schedSnap && schedSnap.exists()) {
         const s = schedSnap.data();

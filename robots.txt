@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /parent/
+Disallow: /watch.html
+Disallow: /channel.html
+Disallow: /backup/
+
+Sitemap: https://viddy.streamwaveprod.com/sitemap.xml

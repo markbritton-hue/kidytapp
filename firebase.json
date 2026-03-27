@@ -1,5 +1,18 @@
 {
   "firestore": {
     "rules": "firestore.rules"
+  },
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "firestore.rules",
+      ".firebaserc",
+      "package.json",
+      "backup/**",
+      "node_modules/**",
+      "googled72012508b4e67f4 (1).html"
+    ],
+    "cleanUrls": false
   }
 }
